@@ -151,6 +151,50 @@
         },
 
 
+        // A/B
+        // ---
+
+        // The `ab` method is for recording which variations of your A/B tests a
+        // user has seen. It's not for actually administering the tests, just
+        // recording them. Here's an example call:
+        //
+        //     analytics.ab('Signup Button Color', 'Red');
+        //
+        // * `test` is the name of the test. The best names are human-readable
+        // so that your whole team knows that they mean.
+        // * `variation` is the name of the variation. Again, choosing human-readable
+        // names is recommended.
+        ab : function (test, variation) {
+            if (!this.initialized) return;
+
+            // Call `ab` on all of our enabled providers that support it.
+            for (var i = 0, provider; provider = this.providers[i]; i++) {
+                if (!provider.ab) continue;
+                provider.ab(test, variation);
+            }
+        },
+
+        kissmetricsAb : function (test, variation) {
+            // Create a traits object for the test.
+            var traits = {};
+            traits[test] = variation;
+
+            // Literally just identify the test as a trait, because KISSmetrics
+            // doesn't have any special API for A/B tests.
+            this.identify(traits);
+        },
+
+        mixpanelAb : function (test, variation) {
+            // Create a traits object for the test.
+            var traits = {};
+            traits[test] = variation;
+
+            // Literally just identify the test as a trait, because Mixpanel
+            // doesn't have any special API for A/B tests.
+            this.identify(traits);
+        },
+
+
         // Utils
         // -----
 
