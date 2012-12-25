@@ -75,11 +75,23 @@
             // Update the initialized state that other methods rely on.
             this.initialized = true;
 
-            // Try to use id and event parameters from the url
-            var userId = this.utils.getUrlParameter(window.location.search, 'ajs_uid');
-            if (userId) this.identify(userId);
-            var event = this.utils.getUrlParameter(window.location.search, 'ajs_event');
-            if (event) this.track(event);
+            // For each of the methods we support query strings for, try to
+            // parse and apply any existing query string value.
+            var queryableMethods = ['identify', 'track'];
+            for (var i = 0, method; method = queryableMethods[i]; i++) {
+                var args = this.utils.getQuery('ajs_' + method);
+
+                if (!args) continue;
+
+                // If the args are JSON parse-able, do that. This lets people
+                // supply arrays of arguments to methods like identify so that
+                // you can specify traits for the user (the second argument).
+                try { args = JSON.parse(args); } catch (e) {}
+
+                // Turn all args into arrays, so they can be applied. And do it!
+                if (!this.utils.isArray(args)) args = [args];
+                this[method].apply(this, args);
+            }
         },
 
 
@@ -237,6 +249,9 @@
             isNumber : function (obj) {
                 return Object.prototype.toString.call(obj) === '[object Number]';
             },
+            isArray : function(obj) {
+                return Object.prototype.toString.call(obj) === '[object Array]';
+            },
 
             // Email detection helper to loosely validate emails.
             isEmail : function (string) {
@@ -265,16 +280,17 @@
                 return settings;
             },
 
-            // A helper to track events based on the 'anjs' url parameter
-            getUrlParameter : function (urlSearchParameter, paramKey) {
-                var params = urlSearchParameter.replace('?', '').split('&');
-                for (var i = 0; i < params.length; i += 1) {
-                    var param = params[i].split('=');
-                    if (param.length === 2 && param[0] === paramKey) {
-                        return decodeURIComponent(param[1]);
-                    }
+            // A helper that decodes and returns the value of a query param from
+            // the current URL.
+            getQuery : function (key) {
+                var params = window.location.search.slice(1).split('&');
+                for (var i = 0, param; param = params[i]; i ++) {
+                    var paramKey   = param.split('=')[0];
+                    var paramValue = param.split('=')[1];
+                    if (paramKey === key) return decodeURIComponent(paramValue);
                 }
             }
+
         }
 
     };
@@ -287,7 +303,9 @@
         if (analytics.utils.isFunction(oldonload)) oldonload();
     };
 
+    // Throw it on to `window`.
     window.analytics = analytics;
+
 })();
 
 

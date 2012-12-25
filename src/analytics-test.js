@@ -1,6 +1,6 @@
-/*global sinon, suite, beforeEach, test, expect, analytics */
 (function () {
 
+    // Create a fake provider to initializing.
     var provider = {
         initialize : function (settings) {},
         identify : function (userId, traits) {},
@@ -8,6 +8,10 @@
         pageview : function () {}
     };
     analytics.addProvider('test', provider);
+
+    // Store the current href so that we can get back to it after testing
+    // different query string methods.
+    var href = window.location.href;
 
 
     // Initialize
@@ -18,36 +22,97 @@
     test('initialize copies providers into this.providers', function () {
         expect(analytics.providers).to.be.empty;
 
-        analytics.initialize({
-            'test' : 'x'
-        });
+        analytics.initialize({'test' : 'x'});
         expect(analytics.providers[0]).to.equal(provider);
     });
 
     test('initialize sends settings to providers initialize method', function () {
         var spy = sinon.spy(provider, 'initialize');
-        analytics.initialize({
-            'test' : 'x'
-        });
+        analytics.initialize({'test' : 'x'});
         expect(spy).to.have.been.calledWith('x');
 
         spy.restore();
     });
 
     test('initialize resets providers and userId', function () {
-        analytics.initialize({
-            'test' : 'x'
-        });
+        analytics.initialize({'test' : 'x'});
         analytics.identify('user');
         expect(analytics.providers.length).to.equal(1);
         expect(analytics.userId).to.equal('user');
 
-        analytics.initialize({
-            'test' : 'x'
-        });
+        analytics.initialize({'test' : 'x'});
         expect(analytics.providers.length).to.equal(1);
         expect(analytics.userId).to.be.null;
     });
+
+    test('initialize doesnt call identify/track without a query', function () {
+        var identify = sinon.spy(analytics, 'identify');
+        var track = sinon.spy(analytics, 'track');
+        analytics.initialize({'test' : 'x'});
+        expect(identify).not.to.have.been.called;
+        expect(track).not.to.have.been.called;
+
+        identify.restore();
+        track.restore();
+    });
+
+    test('initialize calls identify with an ajs_identify query', function (done) {
+        if (!window.history) done();
+
+        history.pushState(null, '', window.location.href+'?ajs_identify=userId');
+        var spy = sinon.spy(analytics, 'identify');
+        analytics.initialize({'test' : 'x'});
+        expect(spy).to.have.been.calledWith('userId');
+
+        history.pushState(null, '', href);
+        spy.restore();
+        done();
+    });
+
+    test('initialize calls identify with a JSON ajs_identify query', function (done) {
+        if (!window.history) done();
+
+        // Encoded and stringified: ['userId', { name : 'Zeus' }]
+        history.pushState(null, '', window.location.href+'?ajs_identify=%5B%22userId%22,%7B%22name%22:%22Zeus%22%7D%5D');
+        var spy = sinon.spy(analytics, 'identify');
+        analytics.initialize({'test' : 'x'});
+        expect(spy).to.have.been.calledWith('userId', {
+            name : 'Zeus'
+        });
+
+        history.pushState(null, '', href);
+        spy.restore();
+        done();
+    });
+
+    test('initialize calls track with an ajs_track query', function (done) {
+        if (!window.history) done();
+
+        history.pushState(null, '', window.location.href+'?ajs_track=event');
+        var spy = sinon.spy(analytics, 'track');
+        analytics.initialize({'test' : 'x'});
+        expect(spy).to.have.been.calledWith('event');
+
+        history.pushState(null, '', href);
+        spy.restore();
+        done();
+    });
+
+    test('initialize calls track with a JSON ajs_track query', function (done) {
+        if (!window.history) done();
+
+        history.pushState(null, '', window.location.href+'?ajs_track=%5B%22event%22,%7B%22price%22:39.95%7D%5D');
+        var spy = sinon.spy(analytics, 'track');
+        analytics.initialize({'test' : 'x'});
+        expect(spy).to.have.been.calledWith('event', {
+            price : 39.95
+        });
+
+        history.pushState(null, '', href);
+        spy.restore();
+        done();
+    });
+
 
     // Identify
     // --------
@@ -201,25 +266,6 @@
     test('getSeconds returns the seconds of a date', function () {
         var date = new Date(1355548865865);
         expect(analytics.utils.getSeconds(date)).to.equal(1355548865);
-    });
-
-    test('get parameter from url', function () {
-        var urlSearchParameter = '?ajs_uid=12k31k2j31k&ajs_event=Test%20Click%20Event&other=1239xxjkjkj&';
-
-        var userId = analytics.utils.getUrlParameter(urlSearchParameter, 'ajs_uid');
-        expect(userId).to.equal('12k31k2j31k');
-
-        var event = analytics.utils.getUrlParameter(urlSearchParameter, 'ajs_event');
-        expect(event).to.equal('Test Click Event');
-
-        var nonexistent = analytics.utils.getUrlParameter(urlSearchParameter, 'variable');
-        expect(nonexistent).to.be.undefined;
-
-        var nonexistent2 = analytics.utils.getUrlParameter('', 'ajs_event');
-        expect(nonexistent2).to.be.undefined;
-
-        var hanging = analytics.utils.getUrlParameter('?ajs_uid', 'ajs_uid');
-        expect(hanging).to.be.undefined;
     });
 
     test('isEmail matches emails', function () {
