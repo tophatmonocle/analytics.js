@@ -5,7 +5,7 @@
 
 analytics.addProvider('Bitdeli', {
 
-    defaults : {
+    options : {
         // Bitdeli has multiple required keys.
         inputId   : null,
         authToken : null,
@@ -16,14 +16,13 @@ analytics.addProvider('Bitdeli', {
 
     // Setup the Bitdeli queue and load the latest version of their library.
     initialize : function (options) {
-        // Setup the `_bdq` queue and add the account information.
         var _bdq = window._bdq = window._bdq || [];
-        _bdq.push(["setAccount", options.inputId, options.authToken]);
-
-        // If the `initialPageview` option is enabled, track a pageview.
-        if (options.initialPageview) this.pageview();
+        _bdq.push(['setAccount', options.inputId, options.authToken]);
 
         this.loadScript('//d2flrkr957qc5j.cloudfront.net/bitdeli.min.js');
+
+        // Track an initial pageview.
+        if (options.initialPageview) this.pageview();
     },
 
     // Bitdeli uses two separate methods: `identify` for storing the `userId`
@@ -33,12 +32,11 @@ analytics.addProvider('Bitdeli', {
         if (traits) window._bdq.push(['set', traits]);
     },
 
-    // Track is just like ours.
     track : function (event, properties) {
         window._bdq.push(['track', event, properties]);
     },
 
-    // If `url` is undefined, Bitdeli uses the current page's URL instead.
+    // If `url` is undefined, Bitdeli automatically uses the current page's URL.
     pageview : function (url) {
         window._bdq.push(['trackPageview', url]);
     }

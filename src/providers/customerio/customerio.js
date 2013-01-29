@@ -8,7 +8,6 @@ analytics.addProvider('Customer.io', {
 
     // Setup the Customer.io queue and methods, and load in their library.
     initialize : function (options) {
-        // Create the queue and setup the helper methods.
         var _cio = window._cio = window._cio || [];
         (function() {
             var a,b,c;
@@ -24,10 +23,12 @@ analytics.addProvider('Customer.io', {
         })();
 
         this.loadScript({
-            http           : 'https://assets.customer.io/assets/track.js',
-            https          : 'https://assets.customer.io/assets/track.js',
-            id             : 'cio-tracker',
-            'data-site-id' : options.sideId
+            http       : 'https://assets.customer.io/assets/track.js',
+            https      : 'https://assets.customer.io/assets/track.js',
+            id         : 'cio-tracker',
+            attributes : {
+                'data-site-id' : options.sideId
+            }
         });
     },
 

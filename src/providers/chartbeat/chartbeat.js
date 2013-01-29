@@ -27,8 +27,8 @@ analytics.addProvider('Chartbeat', {
         });
     },
 
-    // Chartbeat supports virtual URLs, but it doesn't automatically default the
-    // `url` property, so we do that for you.
+    // Chartbeat supports virtual URLs and the `url` property is required, so we
+    // default to the current URL.
     pageview : function (url) {
         window.pSUPERFLY.virtualPage(url || window.location.pathname);
     }

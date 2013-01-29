@@ -5,8 +5,8 @@
 
 (function () {
 
-    // Setup
-    // =====
+    // Analytics
+    // =========
 
     // The `analytics` object that will be exposed to you on the global object.
     var analytics = {
@@ -128,18 +128,19 @@
                 userId = null;
             }
 
-            // Cache the `userId`, or use saved one.
-            if (userId !== null)
+            // Cache the `userId` for next time, or use saved one.
+            if (userId !== null) {
                 this.userId = userId;
-            else
+            } else {
                 userId = this.userId;
+            }
 
             // Call `identify` on all of our enabled providers that support it.
             for (var i = 0, provider; provider = this.providers[i]; i++) {
-                if (!provider.identify) continue;
-                provider.identify(userId, this._.clone(traits));
+                if (provider.identify) provider.identify(userId, this._.clone(traits));
             }
 
+            // If we have a callback, call it.
             if (callback && this._.isFunction(callback)) {
                 setTimeout(callback, this.timeout);
             }
@@ -178,10 +179,10 @@
 
             // Call `track` on all of our enabled providers that support it.
             for (var i = 0, provider; provider = this.providers[i]; i++) {
-                if (!provider.track) continue;
-                provider.track(event, this._.clone(properties));
+                if (provider.track) provider.track(event, this._.clone(properties));
             }
 
+            // If we have a callback, call it.
             if (callback && this._.isFunction(callback)) {
                 setTimeout(callback, this.timeout);
             }
@@ -326,8 +327,7 @@
 
             // Call `pageview` on all of our enabled providers that support it.
             for (var i = 0, provider; provider = this.providers[i]; i++) {
-                if (!provider.pageview) continue;
-                provider.pageview(url);
+                if (provider.pageview) provider.pageview(url);
             }
         },
 
@@ -337,7 +337,7 @@
 
         _ : {
 
-            // Attach an event handler to a DOM element, even in IE.
+            // Attach an event handler to a DOM element. Yes, even in IE.
             bind : function (el, event, callback) {
                 if (el.addEventListener) {
                     el.addEventListener(event, callback, false);
@@ -347,8 +347,7 @@
             },
 
             // A helper to extend objects with properties from other objects.
-            // Based off of the [underscore](https://github.com/documentcloud/underscore/blob/master/underscore.js#L763)
-            // method.
+            // Based on the [underscore method](https://github.com/documentcloud/underscore/blob/master/underscore.js#L763).
             extend : function (obj) {
                 var args = Array.prototype.slice.call(arguments, 1);
                 for (var i = 0, source; source = args[i]; i++) {
@@ -368,8 +367,7 @@
             },
 
             // A helper to alias certain object's keys to different key names.
-            // Useful for abstracting over providers that require specific key
-            // names.
+            // Useful for abstracting over providers that require specific keys.
             alias : function (obj, aliases) {
                 for (var prop in aliases) {
                     var alias = aliases[prop];
@@ -380,8 +378,7 @@
                 }
             },
 
-            // Type detection helpers, copied from
-            // [underscore](https://github.com/documentcloud/underscore/blob/master/underscore.js#L926-L946).
+            // Type detection helpers, copied from [underscore](https://github.com/documentcloud/underscore/blob/master/underscore.js#L926-L946).
             isElement : function(obj) {
                 return !!(obj && obj.nodeType === 1);
             },
@@ -431,7 +428,6 @@
                 return false;
             },
 
-            // A helper to track events based on the 'anjs' url parameter
             getUrlParameter : function (urlSearchParameter, paramKey) {
                 var params = urlSearchParameter.replace('?', '').split('&');
                 for (var i = 0; i < params.length; i += 1) {
@@ -458,18 +454,62 @@
                     search   : a.search,
                     query    : a.search.slice(1)
                 };
+            },
+
+            // A helper to asynchronously load a script by appending a script
+            // element to the DOM. This way we don't need to keep repeating all that
+            // crufty Javascript snippet code.
+            loadScript : function (options) {
+                // Allow for the simplest case, just passing a url fragment.
+                if (this.isString(options)) options = { fragment : options };
+
+                // Make the async script element.
+                var script = document.createElement('script');
+                script.type = 'text/javascript';
+                script.async = true;
+
+                // Handle optional attributes on the script.
+                if (options.id) script.id = options.id;
+                if (options.attributes) {
+                    for (var attr in options.attributes) {
+                        script.setAttribute(attr, options.attributes[attr]);
+                    }
+                }
+
+                // Based on the protocol, allow for a simple fragment that is
+                // the same regardless, or URLs specific to each protocol.
+                var protocol = 'https:' === document.location.protocol ? 'https:' : 'http:';
+                if (protocol === 'https:') {
+                    script.src = options.https || (protocol + options.fragment);
+                } else {
+                    script.src = options.http || (protocol + options.fragment);
+                }
+
+                // Attach the script to the DOM.
+                var firstScript = document.getElementsByTagName('script')[0];
+                firstScript.parentNode.insertBefore(script, firstScript);
             }
         }
     };
 
-    // Add `trackClick` and `trackSubmit` for backwards compatibility.
+    // Alias `trackClick` and `trackSubmit` for backwards compatibility.
     analytics.trackClick = analytics.trackLink;
     analytics.trackSubmit = analytics.trackForm;
+
+    // Wrap any existing `onload` function with our own that will cache the
+    // loaded state of the page.
+    var oldonload = window.onload;
+    window.onload = function () {
+        analytics.loaded = true;
+        if (analytics._.isFunction(oldonload)) oldonload();
+    };
+
 
 
     // Provider
     // ========
 
+    // Setup the Provider constructor.
     var Provider = analytics.Provider = function (options) {
         // Allow for `options` to only be a string if the provider has specified
         // a default `key`, in which case convert `options` into a dictionary.
@@ -482,16 +522,17 @@
         }
 
         // Extend the options passed in with the provider's defaults.
-        this.options = analytics._.extend({}, this.defaults, options);
+        analytics._.extend(this.options, options);
 
         // Call the provider's initialize object.
-        this.initialize.apply(this, this.options);
+        this.initialize.call(this, this.options);
     };
 
+    // Add some defaults to the Provider prototype.
     analytics._.extend(Provider.prototype, {
 
         // Override this with any default options.
-        defaults : {},
+        options : {},
 
         // Override this if our provider only needs a single API key to
         // initialize itself, in which case we can use the terse initialization
@@ -503,46 +544,14 @@
         //
         key : undefined,
 
-        initialize : function (options) {},
-
-        // A helper to asynchronously load a script by appending a script
-        // element to the DOM. This way we don't need to keep repeating all that
-        // crufty Javascript snippet code.
-        loadScript : function (options) {
-            // Allow for the simplest case, just passing a url fragment.
-            if (this.isString(options)) options = { fragment : options };
-
-            // Make the async script element.
-            var script = document.createElement('script');
-            script.type = 'text/javascript';
-            script.async = true;
-
-            // Handle optional attributes on the script.
-            if (options.id) script.id = options.id;
-            if (options.attributes) {
-                for (var attr in options.attributes) {
-                    script.setAttribute(attr, options.attributes[attr]);
-                }
-            }
-
-            // Based on the protocol, allow for a simple fragment that is
-            // the same regardless, or URLs specific to each protocol.
-            var protocol = 'https:' === document.location.protocol ? 'https:' : 'http:';
-            if (protocol === 'https:') {
-                script.src = options.https || (protocol + options.fragment);
-            } else {
-                script.src = options.http || (protocol + options.fragment);
-            }
-
-            // Attach the script to the DOM.
-            var firstScript = document.getElementsByTagName('script')[0];
-            firstScript.parentNode.insertBefore(script, firstScript);
-        }
+        // Override to provider your own initialization logic, usually a snippet
+        // and loading a Javascript library.
+        initialize : function (options) {}
 
     });
 
-    // Helper to add provider methods to the prototype chain. Modeled after
-    // [Backbone's `extend` method](https://github.com/documentcloud/backbone/blob/master/backbone.js#L1464).
+    // Helper to add provider methods to the prototype chain, for adding custom
+    // providers. Modeled after [Backbone's `extend` method](https://github.com/documentcloud/backbone/blob/master/backbone.js#L1464).
     Provider.extend = function (name, provider) {
         var parent = this;
         var child = function () { return parent.apply(this, arguments); };
@@ -554,13 +563,8 @@
     };
 
 
-    // Wrap any existing `onload` function with our own that will cache the
-    // loaded state of the page.
-    var oldonload = window.onload;
-    window.onload = function () {
-        analytics.loaded = true;
-        if (analytics._.isFunction(oldonload)) oldonload();
-    };
 
+    // Throw it onto the window.
     window.analytics = analytics;
+
 })();
