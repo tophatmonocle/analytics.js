@@ -1,63 +1,54 @@
 // FoxMetrics
 // -----------
-// [Website] (http://foxmetrics.com)
 // [Documentation](http://foxmetrics.com/documentation)
 // [Documentation - JS](http://foxmetrics.com/documentation/apijavascript)
-// [Support](http://support.foxmetrics.com)
 
 analytics.addProvider('FoxMetrics', {
 
-    settings: {
-        appId: null
-    },
+    key : 'appId',
 
-
-    // Initialize
-    // ----------
-
-    initialize: function (settings) {
-        settings = analytics.utils.resolveSettings(settings, 'appId');
-        analytics.utils.extend(this.settings, settings);
-
+    // Create the `_fxm` events queue and load the FoxMetrics library.
+    initialize: function (options) {
         var _fxm = window._fxm || {};
         window._fxm = _fxm.events || [];
-
-        analytics.utils.loadScript('//d35tca7vmefkrc.cloudfront.net/scripts/' + this.settings.appId + '.js');
+        this.loadScript('//d35tca7vmefkrc.cloudfront.net/scripts/' + options.appId + '.js');
     },
-
-
-    // Identify
-    // --------
 
     identify: function (userId, traits) {
+        // The `userId` is required.
+        if (!userId) return;
 
-        // user id is required for profile updates,
-        // otherwise its a waste of resources as nothing will get updated
-        if (userId) {
-            // fxm needs first and last name seperately
-            var fname = null, lname = null, email = null;
-            if (traits) {
-                fname = traits.name.split(' ')[0];
-                lname = traits.name.split(' ')[1];
-                email = typeof (traits.email) !== 'undefined' ? traits.email : null;
-            }
-
-            // we should probably remove name and email before passing as attributes
-            window._fxm.push(['_fxm.visitor.Profile', userId, fname, lname, email, null, null, null, (traits || null)]);
+        // FoxMetrics needs first and last name seperately.
+        var firstName, lastName, email;
+        if (traits && traits.name) {
+            firstName = traits.name.split(' ')[0];
+            lastName  = traits.name.split(' ')[1];
         }
+        if (traits && traits.email) {
+            email = traits.email;
+        }
+
+        // Remove the name and email traits, since they're sent separately.
+        delete traits.name;
+        delete traits.email;
+
+        window._fxm.push([
+            '_fxm.visitor.Profile',
+            userId,    // ID
+            firstName, // First name
+            lastName,  // Last name
+            email,     // Email address
+            null,      // Address
+            null,      // Social information
+            null,      // Parter IDs
+            traits     // Additional attributes
+        ]);
     },
-
-
-    // Track
-    // -----
 
     track: function (event, properties) {
         // send in null as event category name
         window._fxm.push([event, null, properties]);
     },
-
-    // Pageview
-    // ----------
 
     pageview: function (url) {
         // we are happy to accept traditional analytics :)

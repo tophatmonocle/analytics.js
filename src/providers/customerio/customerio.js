@@ -4,23 +4,11 @@
 
 analytics.addProvider('Customer.io', {
 
-    settings : {
-        siteId : null
-    },
+    key : 'siteId',
 
-
-    // Initialize
-    // ----------
-
-    // Changes to the Customer.io snippet:
-    //
-    // * Add `siteId`.
-    initialize : function (settings) {
-        settings = analytics.utils.resolveSettings(settings, 'siteId');
-        analytics.utils.extend(this.settings, settings);
-
-        var self = this;
-
+    // Setup the Customer.io queue and methods, and load in their library.
+    initialize : function (options) {
+        // Create the queue and setup the helper methods.
         var _cio = window._cio = window._cio || [];
         (function() {
             var a,b,c;
@@ -35,17 +23,13 @@ analytics.addProvider('Customer.io', {
             }
         })();
 
-        analytics.utils.loadScript({
+        this.loadScript({
             http           : 'https://assets.customer.io/assets/track.js',
             https          : 'https://assets.customer.io/assets/track.js',
             id             : 'cio-tracker',
-            'data-site-id' : this.settings.sideId
+            'data-site-id' : options.sideId
         });
     },
-
-
-    // Identify
-    // --------
 
     identify : function (userId, traits) {
         // Don't do anything if we just have traits, because Customer.io
@@ -58,23 +42,19 @@ analytics.addProvider('Customer.io', {
         traits.id = userId;
 
         // If there wasn't already an email and the userId is one, use it.
-        if (!traits.email && analytics.utils.isEmail(userId)) {
+        if (!traits.email && analytics._.isEmail(userId)) {
             traits.email = userId;
         }
 
         // Swap the `created` trait to the `created_at` that Customer.io needs
         // (in seconds).
         if (traits.created) {
-            traits.created_at = analytics.utils.getSeconds(traits.created);
+            traits.created_at = analytics._.getSeconds(traits.created);
             delete traits.created;
         }
 
         window._cio.identify(traits);
     },
-
-
-    // Track
-    // -----
 
     track : function (event, properties) {
         window._cio.track(event, properties);

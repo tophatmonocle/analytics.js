@@ -398,15 +398,15 @@
     suite('utils');
 
     test('resolveSettings converts a settings string into an api key', function() {
-        expect(analytics.utils.resolveSettings('x', 'apiKey')).to.eql({ apiKey : 'x' });
-        expect(analytics.utils.resolveSettings({ apiKey : 'x' }, 'apiKey')).to.eql({ apiKey : 'x' });
+        expect(analytics._.resolveSettings('x', 'apiKey')).to.eql({ apiKey : 'x' });
+        expect(analytics._.resolveSettings({ apiKey : 'x' }, 'apiKey')).to.eql({ apiKey : 'x' });
     });
 
     test('clone returns a copy of an object', function () {
         var object = { thing: 1 };
 
-        expect(analytics.utils.clone(object)).not.to.equal(object);
-        expect(analytics.utils.clone(object)).to.eql(object);
+        expect(analytics._.clone(object)).not.to.equal(object);
+        expect(analytics._.clone(object)).to.eql(object);
     });
 
     test('extend augments an object', function () {
@@ -414,14 +414,14 @@
             one : 1
         };
 
-        analytics.utils.extend(object, { two: 2 });
+        analytics._.extend(object, { two: 2 });
 
         expect(object).to.eql({
             one : 1,
             two : 2
         });
 
-        analytics.utils.extend(object, { three: 3 }, { four: 4 });
+        analytics._.extend(object, { three: 3 }, { four: 4 });
 
         expect(object).to.eql({
             one   : 1,
@@ -430,7 +430,7 @@
             four  : 4
         });
 
-        analytics.utils.extend(object, { one: 2 });
+        analytics._.extend(object, { one: 2 });
 
         expect(object).to.eql({
             one   : 2,
@@ -446,14 +446,14 @@
             email : 'medusa@segment.io'
         };
 
-        analytics.utils.alias(traits, { email: '$email' });
+        analytics._.alias(traits, { email: '$email' });
 
         expect(traits).to.eql({
             name   : 'Medusa',
             $email : 'medusa@segment.io'
         });
 
-        analytics.utils.alias(traits, { createdAt: 'created_at' });
+        analytics._.alias(traits, { createdAt: 'created_at' });
 
         expect(traits).to.eql({
             name   : 'Medusa',
@@ -463,30 +463,30 @@
 
     test('getSeconds returns the seconds of a date', function () {
         var date = new Date(1355548865865);
-        expect(analytics.utils.getSeconds(date)).to.equal(1355548865);
+        expect(analytics._.getSeconds(date)).to.equal(1355548865);
     });
 
     test('get parameter from url', function () {
         var urlSearchParameter = '?ajs_uid=12k31k2j31k&ajs_event=Test%20Click%20Event&other=1239xxjkjkj&';
 
-        var userId = analytics.utils.getUrlParameter(urlSearchParameter, 'ajs_uid');
+        var userId = analytics._.getUrlParameter(urlSearchParameter, 'ajs_uid');
         expect(userId).to.equal('12k31k2j31k');
 
-        var event = analytics.utils.getUrlParameter(urlSearchParameter, 'ajs_event');
+        var event = analytics._.getUrlParameter(urlSearchParameter, 'ajs_event');
         expect(event).to.equal('Test Click Event');
 
-        var nonexistent = analytics.utils.getUrlParameter(urlSearchParameter, 'variable');
+        var nonexistent = analytics._.getUrlParameter(urlSearchParameter, 'variable');
         expect(nonexistent).to.be.undefined;
 
-        var nonexistent2 = analytics.utils.getUrlParameter('', 'ajs_event');
+        var nonexistent2 = analytics._.getUrlParameter('', 'ajs_event');
         expect(nonexistent2).to.be.undefined;
 
-        var hanging = analytics.utils.getUrlParameter('?ajs_uid', 'ajs_uid');
+        var hanging = analytics._.getUrlParameter('?ajs_uid', 'ajs_uid');
         expect(hanging).to.be.undefined;
     });
 
     test('isEmail matches emails', function () {
-        var isEmail = analytics.utils.isEmail;
+        var isEmail = analytics._.isEmail;
         expect(isEmail('team@segment.io')).to.be(true);
         expect(isEmail('t-eam+34@segme-ntio.com')).to.be(true);
         expect(isEmail('team@.org')).to.be(false);
@@ -495,7 +495,7 @@
     });
 
     test('isObject matches objects', function () {
-        var isObject = analytics.utils.isObject;
+        var isObject = analytics._.isObject;
         expect(isObject({})).to.be(true);
         expect(isObject([])).to.be(true);
         expect(isObject(function () {})).to.be(true);
@@ -504,7 +504,7 @@
     });
 
     test('isFunction matches functions', function () {
-        var isFunction = analytics.utils.isFunction;
+        var isFunction = analytics._.isFunction;
         expect(isFunction(function () {})).to.be(true);
         expect(isFunction({})).to.be(false);
         expect(isFunction([])).to.be(false);
@@ -513,7 +513,7 @@
     });
 
     test('isNumber matches numbers', function () {
-        var isNumber = analytics.utils.isNumber;
+        var isNumber = analytics._.isNumber;
         expect(isNumber(0)).to.be(true);
         expect(isNumber({})).to.be(false);
         expect(isNumber([])).to.be(false);
@@ -522,7 +522,7 @@
     });
 
     test('isString matches strings', function () {
-        var isString = analytics.utils.isString;
+        var isString = analytics._.isString;
         expect(isString('string')).to.be(true);
         expect(isString({})).to.be(false);
         expect(isString([])).to.be(false);
@@ -533,7 +533,7 @@
     test('parseUrl can parse URLs', function () {
         var url = 'http://google.com/finance?search=hi#test';
 
-        expect(analytics.utils.parseUrl(url)).to.eql({
+        expect(analytics._.parseUrl(url)).to.eql({
             href     : url,
             host     : 'google.com',
             port     : '0',

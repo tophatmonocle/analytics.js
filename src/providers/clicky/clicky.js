@@ -4,28 +4,17 @@
 
 analytics.addProvider('Clicky', {
 
-    settings : {
-        siteId : null
+    key : 'siteId',
+
+    // Setup the current Clicky account and load in the Clicky library.
+    initialize : function (options) {
+        window.clicky_site_ids = window.clicky_site_ids || [];
+        window.clicky_site_ids.push(options.siteId);
+
+        this.loadScript('//static.getclicky.com/js');
     },
 
-
-    // Initialize
-    // ----------
-
-    initialize : function (settings) {
-        settings = analytics.utils.resolveSettings(settings, 'siteId');
-        analytics.utils.extend(this.settings, settings);
-
-        var clicky_site_ids = window.clicky_site_ids = window.clicky_site_ids || [];
-        clicky_site_ids.push(settings.siteId);
-
-        analytics.utils.loadScript('//static.getclicky.com/js');
-    },
-
-
-    // Track
-    // -----
-
+    // Clicky's `log` method only support event names, not properties.
     track : function (event, properties) {
         // We aren't guaranteed `clicky` is available until the script has been
         // requested and run, hence the check.

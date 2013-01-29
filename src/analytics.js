@@ -6,7 +6,7 @@
 (function () {
 
     // Setup
-    // -----
+    // =====
 
     // The `analytics` object that will be exposed to you on the global object.
     var analytics = {
@@ -40,8 +40,10 @@
 
         // Adds a provider to the list of available providers that can be
         // initialized.
-        addProvider : function (name, provider) {
-            this.initializableProviders[name] = provider;
+        addProvider : function (name, properties) {
+            // Take the methods and add them to a Provider class's prototype.
+            var Provider = analytics.Provider.extend(properties);
+            this.initializableProviders[name] = Provider;
         },
 
 
@@ -66,23 +68,23 @@
             this.providers = [];
             this.userId = null;
 
-            // Initialize each provider with the proper settings, and copy the
+            // Initialize each provider with the proper options, and copy the
             // provider into `this.providers`.
             for (var key in providers) {
-                var provider = this.initializableProviders[key];
-                var settings = providers[key];
-                if (!provider) throw new Error('Could not find a provider named "'+key+'"');
-                provider.initialize(settings);
-                this.providers.push(provider);
+                var Provider = this.initializableProviders[key];
+                if (!Provider) throw new Error('Could not find a provider named "'+key+'"');
+
+                var options = providers[key];
+                this.providers.push(new Provider(options));
             }
 
             // Update the initialized state that other methods rely on.
             this.initialized = true;
 
             // Try to use id and event parameters from the url
-            var userId = this.utils.getUrlParameter(window.location.search, 'ajs_uid');
+            var userId = this._.getUrlParameter(window.location.search, 'ajs_uid');
             if (userId) this.identify(userId);
-            var event = this.utils.getUrlParameter(window.location.search, 'ajs_event');
+            var event = this._.getUrlParameter(window.location.search, 'ajs_event');
             if (event) this.track(event);
         },
 
@@ -113,15 +115,15 @@
             if (!this.initialized) return;
 
             // Allow for not passing traits, but passing a callback.
-            if (this.utils.isFunction(traits)) {
+            if (this._.isFunction(traits)) {
                 callback = traits;
                 traits = null;
             }
 
             // Allow for identifying traits without setting a `userId`, for
             // anonymous users whose traits you learn.
-            if (this.utils.isObject(userId)) {
-                if (traits && this.utils.isFunction(traits)) callback = traits;
+            if (this._.isObject(userId)) {
+                if (traits && this._.isFunction(traits)) callback = traits;
                 traits = userId;
                 userId = null;
             }
@@ -135,10 +137,10 @@
             // Call `identify` on all of our enabled providers that support it.
             for (var i = 0, provider; provider = this.providers[i]; i++) {
                 if (!provider.identify) continue;
-                provider.identify(userId, this.utils.clone(traits));
+                provider.identify(userId, this._.clone(traits));
             }
 
-            if (callback && this.utils.isFunction(callback)) {
+            if (callback && this._.isFunction(callback)) {
                 setTimeout(callback, this.timeout);
             }
         },
@@ -169,7 +171,7 @@
             if (!this.initialized) return;
 
             // Allow for not passing properties, but passing a callback.
-            if (this.utils.isFunction(properties)) {
+            if (this._.isFunction(properties)) {
                 callback = properties;
                 properties = null;
             }
@@ -177,10 +179,10 @@
             // Call `track` on all of our enabled providers that support it.
             for (var i = 0, provider; provider = this.providers[i]; i++) {
                 if (!provider.track) continue;
-                provider.track(event, this.utils.clone(properties));
+                provider.track(event, this._.clone(properties));
             }
 
-            if (callback && this.utils.isFunction(callback)) {
+            if (callback && this._.isFunction(callback)) {
                 setTimeout(callback, this.timeout);
             }
         },
@@ -205,18 +207,18 @@
 
             // Turn a single link into an array so that we're always handling
             // arrays, which allows for passing jQuery objects.
-            if (this.utils.isElement(link)) link = [link];
+            if (this._.isElement(link)) link = [link];
 
             // Bind to all the links in the array.
             for (var i = 0; i < link.length; i++) {
                 var self = this;
                 var el = link[i];
 
-                this.utils.bind(el, 'click', function (e) {
+                this._.bind(el, 'click', function (e) {
 
                     // Allow for properties to be a function. And pass it the
                     // link element that was clicked.
-                    if (self.utils.isFunction(properties)) properties = properties(el);
+                    if (self._.isFunction(properties)) properties = properties(el);
 
                     // Fire a normal track call.
                     self.track(event, properties);
@@ -231,7 +233,7 @@
                     //
                     // This might not cover all cases, but we'd rather throw out
                     // an event than miss a case that breaks the experience.
-                    if (el.href && el.target !== '_blank' && !self.utils.isMeta(e)) {
+                    if (el.href && el.target !== '_blank' && !self._.isMeta(e)) {
 
                         // Prevent the link's default redirect in all the sane
                         // browsers, and also IE.
@@ -270,18 +272,18 @@
 
             // Turn a single element into an array so that we're always handling
             // arrays, which allows for passing jQuery objects.
-            if (this.utils.isElement(form)) form = [form];
+            if (this._.isElement(form)) form = [form];
 
             // Bind to all the forms in the array.
             for (var i = 0; i < form.length; i++) {
                 var self = this;
                 var el = form[i];
 
-                this.utils.bind(el, 'submit', function (e) {
+                this._.bind(el, 'submit', function (e) {
 
                     // Allow for properties to be a function. And pass it the
                     // form element that was submitted.
-                    if (self.utils.isFunction(properties)) properties = properties(el);
+                    if (self._.isFunction(properties)) properties = properties(el);
 
                     // Fire a normal track call.
                     self.track(event, properties);
@@ -333,40 +335,7 @@
         // Utils
         // -----
 
-        utils : {
-
-            // A helper to asynchronously load a script by append a script
-            // element to the DOM. Used in JS snippets.
-            loadScript : function (options) {
-                // Allow for the simplest case, just passing a url fragment.
-                if (this.isString(options)) options = { fragment : options };
-
-                // Make the async script element.
-                var script = document.createElement('script');
-                script.type = 'text/javascript';
-                script.async = true;
-
-                // Handle optional attributes on the script.
-                if (options.id) script.id = options.id;
-                if (options.attributes) {
-                    for (var attr in options.attributes) {
-                        script.setAttribute(attr, options.attributes[attr]);
-                    }
-                }
-
-                // Based on the protocol, allow for a simple fragment that is
-                // the same regardless, or URLs specific to each protocol.
-                var protocol = 'https:' === document.location.protocol ? 'https:' : 'http:';
-                if (protocol === 'https:') {
-                    script.src = options.https || (protocol + options.fragment);
-                } else {
-                    script.src = options.http || (protocol + options.fragment);
-                }
-
-                // Attach the script to the DOM.
-                var firstScript = document.getElementsByTagName('script')[0];
-                firstScript.parentNode.insertBefore(script, firstScript);
-            },
+        _ : {
 
             // Attach an event handler to a DOM element, even in IE.
             bind : function (el, event, callback) {
@@ -375,31 +344,6 @@
                 } else if (el.attachEvent) {
                     el.attachEvent('on' + event, callback);
                 }
-            },
-
-            // Given a DOM event, tell us whether a meta key or button was
-            // pressed that would make a link open in a new tab, window,
-            // start a download, or anything else that wouldn't take the user to
-            // a new page.
-            isMeta : function (e) {
-                if (e.metaKey || e.altKey || e.ctrlKey || e.shiftKey) return true;
-
-                // Logic that handles checks for the middle mouse button, based
-                // on [jQuery](https://github.com/jquery/jquery/blob/master/src/event.js#L466).
-                var which = e.which, button = e.button;
-                if (!which && button !== undefined) {
-                    return (!button & 1) && (!button & 2) && (button & 4);
-                } else if (which === 2) {
-                    return true;
-                }
-
-                return false;
-            },
-
-            // Given a timestamp, return its value in seconds. For providers
-            // that rely on Unix time instead of millis.
-            getSeconds : function (time) {
-                return Math.floor((new Date(time)) / 1000);
             },
 
             // A helper to extend objects with properties from other objects.
@@ -441,11 +385,11 @@
             isElement : function(obj) {
                 return !!(obj && obj.nodeType === 1);
             },
-            isArray : Array.isArray || function (obj) {
-                return Object.prototype.toString.call(obj) === '[object Array]';
-            },
             isObject : function (obj) {
                 return obj === Object(obj);
+            },
+            isArray : Array.isArray || function (obj) {
+                return Object.prototype.toString.call(obj) === '[object Array]';
             },
             isString : function (obj) {
                 return Object.prototype.toString.call(obj) === '[object String]';
@@ -462,26 +406,29 @@
                 return (/.+\@.+\..+/).test(string);
             },
 
-            // A helper to resolve a settings object. It allows for `settings`
-            // to be a string in the case of using the shorthand where just an
-            // api key is passed. `fieldName` is what the provider calls their
-            // api key.
-            resolveSettings : function (settings, fieldName) {
-                if (!this.isString(settings) && !this.isObject(settings))
-                    throw new Error('Could not resolve settings.');
-                if (!fieldName)
-                    throw new Error('You must provide an api key field name.');
+            // Given a timestamp, return its value in seconds. For providers
+            // that rely on Unix time instead of millis.
+            getSeconds : function (time) {
+                return Math.floor((new Date(time)) / 1000);
+            },
 
-                // Allow for settings to just be an API key, for example:
-                //
-                //     { 'Google Analytics : 'UA-XXXXXXX-X' }
-                if (this.isString(settings)) {
-                    var apiKey = settings;
-                    settings = {};
-                    settings[fieldName] = apiKey;
+            // Given a DOM event, tell us whether a meta key or button was
+            // pressed that would make a link open in a new tab, window,
+            // start a download, or anything else that wouldn't take the user to
+            // a new page.
+            isMeta : function (e) {
+                if (e.metaKey || e.altKey || e.ctrlKey || e.shiftKey) return true;
+
+                // Logic that handles checks for the middle mouse button, based
+                // on [jQuery](https://github.com/jquery/jquery/blob/master/src/event.js#L466).
+                var which = e.which, button = e.button;
+                if (!which && button !== undefined) {
+                    return (!button & 1) && (!button & 2) && (button & 4);
+                } else if (which === 2) {
+                    return true;
                 }
 
-                return settings;
+                return false;
             },
 
             // A helper to track events based on the 'anjs' url parameter
@@ -513,22 +460,107 @@
                 };
             }
         }
-
     };
 
     // Add `trackClick` and `trackSubmit` for backwards compatibility.
     analytics.trackClick = analytics.trackLink;
     analytics.trackSubmit = analytics.trackForm;
 
+
+    // Provider
+    // ========
+
+    var Provider = analytics.Provider = function (options) {
+        // Allow for `options` to only be a string if the provider has specified
+        // a default `key`, in which case convert `options` into a dictionary.
+        if (analytics._.isString(options) && this.key) {
+            var key = options;
+            options = {};
+            options[this.key] = key;
+        } else {
+            throw new Error('Could not resolve options.');
+        }
+
+        // Extend the options passed in with the provider's defaults.
+        this.options = analytics._.extend({}, this.defaults, options);
+
+        // Call the provider's initialize object.
+        this.initialize.apply(this, this.options);
+    };
+
+    analytics._.extend(Provider.prototype, {
+
+        // Override this with any default options.
+        defaults : {},
+
+        // Override this if our provider only needs a single API key to
+        // initialize itself, in which case we can use the terse initialization
+        // syntax:
+        //
+        //     analytics.initialize({
+        //       'Provider' : 'XXXXXXX'
+        //     });
+        //
+        key : undefined,
+
+        initialize : function (options) {},
+
+        // A helper to asynchronously load a script by appending a script
+        // element to the DOM. This way we don't need to keep repeating all that
+        // crufty Javascript snippet code.
+        loadScript : function (options) {
+            // Allow for the simplest case, just passing a url fragment.
+            if (this.isString(options)) options = { fragment : options };
+
+            // Make the async script element.
+            var script = document.createElement('script');
+            script.type = 'text/javascript';
+            script.async = true;
+
+            // Handle optional attributes on the script.
+            if (options.id) script.id = options.id;
+            if (options.attributes) {
+                for (var attr in options.attributes) {
+                    script.setAttribute(attr, options.attributes[attr]);
+                }
+            }
+
+            // Based on the protocol, allow for a simple fragment that is
+            // the same regardless, or URLs specific to each protocol.
+            var protocol = 'https:' === document.location.protocol ? 'https:' : 'http:';
+            if (protocol === 'https:') {
+                script.src = options.https || (protocol + options.fragment);
+            } else {
+                script.src = options.http || (protocol + options.fragment);
+            }
+
+            // Attach the script to the DOM.
+            var firstScript = document.getElementsByTagName('script')[0];
+            firstScript.parentNode.insertBefore(script, firstScript);
+        }
+
+    });
+
+    // Helper to add provider methods to the prototype chain. Modeled after
+    // [Backbone's `extend` method](https://github.com/documentcloud/backbone/blob/master/backbone.js#L1464).
+    Provider.extend = function (name, provider) {
+        var parent = this;
+        var child = function () { return parent.apply(this, arguments); };
+        var Surrogate = function () { this.constructor = child; };
+        Surrogate.prototype = parent.prototype;
+        child.prototype = new Surrogate();
+        analytics._.extend(child.prototype, provider);
+        return child;
+    };
+
+
     // Wrap any existing `onload` function with our own that will cache the
     // loaded state of the page.
     var oldonload = window.onload;
     window.onload = function () {
         analytics.loaded = true;
-        if (analytics.utils.isFunction(oldonload)) oldonload();
+        if (analytics._.isFunction(oldonload)) oldonload();
     };
 
     window.analytics = analytics;
 })();
-
-

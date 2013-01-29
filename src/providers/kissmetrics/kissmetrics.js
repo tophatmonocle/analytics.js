@@ -4,30 +4,16 @@
 
 analytics.addProvider('KISSmetrics', {
 
-    settings : {
-        apiKey : null
-    },
+    key : 'apiKey',
 
-
-    // Initialize
-    // ----------
-
-    // Changes to the KISSmetrics snippet:
-    //
-    // * Concatenate the `apiKey` into the URL.
-    initialize : function (settings) {
-        settings = analytics.utils.resolveSettings(settings, 'apiKey');
-        analytics.utils.extend(this.settings, settings);
-
+    // Create the `_kmq` queue and load in the KISSmetrics scripts,
+    // concatenating the `apiKey` into the URL.
+    initialize : function (options) {
         var _kmq = window._kmq = window._kmq || [];
 
-        analytics.utils.loadScript('//i.kissmetrics.com/i.js');
-        analytics.utils.loadScript('//doug1izaerwt3.cloudfront.net/' + this.settings.apiKey + '.1.js');
+        this.loadScript('//i.kissmetrics.com/i.js');
+        this.loadScript('//doug1izaerwt3.cloudfront.net/' + options.apiKey + '.1.js');
     },
-
-
-    // Identify
-    // --------
 
     // KISSmetrics uses two separate methods: `identify` for storing the
     // `userId`, and `set` for storing `traits`.
@@ -35,10 +21,6 @@ analytics.addProvider('KISSmetrics', {
         if (userId) window._kmq.push(['identify', userId]);
         if (traits) window._kmq.push(['set', traits]);
     },
-
-
-    // Track
-    // -----
 
     track : function (event, properties) {
         window._kmq.push(['record', event, properties]);

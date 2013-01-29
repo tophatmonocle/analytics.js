@@ -53,7 +53,7 @@
 
     test('throws error on initialize when "inputId" is missing', function () {
         expect(function() {
-            var modifiedSettings = analytics.utils.clone(settings);
+            var modifiedSettings = analytics._.clone(settings);
             delete modifiedSettings.inputId;
             analytics.initialize({ 'Bitdeli' : modifiedSettings });
         }).to.throwException(function (e) {
@@ -63,7 +63,7 @@
 
     test('throws error on initialize when "authToken" is missing', function () {
         expect(function() {
-            var modifiedSettings = analytics.utils.clone(settings);
+            var modifiedSettings = analytics._.clone(settings);
             delete modifiedSettings.authToken;
             analytics.initialize({ 'Bitdeli' : modifiedSettings });
         }).to.throwException(function (e) {
@@ -85,7 +85,7 @@
         window._bdq = [];
         var spy = sinon.spy(window._bdq, 'push');
 
-        var modifiedSettings = analytics.utils.clone(settings);
+        var modifiedSettings = analytics._.clone(settings);
         modifiedSettings.initialPageview = false;
         analytics.initialize({ 'Bitdeli' : modifiedSettings });
 
