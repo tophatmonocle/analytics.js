@@ -20,20 +20,9 @@ analytics.addProvider('KISSmetrics', {
         analytics.utils.extend(this.settings, settings);
 
         var _kmq = window._kmq = window._kmq || [];
-        function _kms(u){
-            setTimeout(function(){
-                var d = document,
-                    f = d.getElementsByTagName('script')[0],
-                    s = d.createElement('script');
-                s.type = 'text/javascript';
-                s.async = true;
-                var protocol = ('https:' == document.location.protocol) ? 'https:' : 'http:';
-                s.src = protocol + u;
-                f.parentNode.insertBefore(s, f);
-            }, 1);
-        }
-        _kms('//i.kissmetrics.com/i.js');
-        _kms('//doug1izaerwt3.cloudfront.net/'+this.settings.apiKey+'.1.js');
+
+        analytics.utils.loadScript('//i.kissmetrics.com/i.js');
+        analytics.utils.loadScript('//doug1izaerwt3.cloudfront.net/' + this.settings.apiKey + '.1.js');
     },
 
 

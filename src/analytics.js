@@ -335,6 +335,39 @@
 
         utils : {
 
+            // A helper to asynchronously load a script by append a script
+            // element to the DOM. Used in JS snippets.
+            loadScript : function (options) {
+                // Allow for the simplest case, just passing a url fragment.
+                if (this.isString(options)) options = { fragment : options };
+
+                // Make the async script element.
+                var script = document.createElement('script');
+                script.type = 'text/javascript';
+                script.async = true;
+
+                // Handle optional attributes on the script.
+                if (options.id) script.id = options.id;
+                if (options.attributes) {
+                    for (var attr in options.attributes) {
+                        script.setAttribute(attr, options.attributes[attr]);
+                    }
+                }
+
+                // Based on the protocol, allow for a simple fragment that is
+                // the same regardless, or URLs specific to each protocol.
+                var protocol = 'https:' === document.location.protocol ? 'https:' : 'http:';
+                if (protocol === 'https:') {
+                    script.src = options.https || (protocol + options.fragment);
+                } else {
+                    script.src = options.http || (protocol + options.fragment);
+                }
+
+                // Attach the script to the DOM.
+                var firstScript = document.getElementsByTagName('script')[0];
+                firstScript.parentNode.insertBefore(script, firstScript);
+            },
+
             // Attach an event handler to a DOM element, even in IE.
             bind : function (el, event, callback) {
                 if (el.addEventListener) {

@@ -19,14 +19,7 @@ analytics.addProvider('Clicky', {
         var clicky_site_ids = window.clicky_site_ids = window.clicky_site_ids || [];
         clicky_site_ids.push(settings.siteId);
 
-        (function() {
-            var s = document.createElement('script');
-            s.type = 'text/javascript';
-            s.async = true;
-            var protocol = ('https:' == document.location.protocol) ? 'https:' : 'http:';
-            s.src = protocol + '//static.getclicky.com/js';
-            (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(s);
-        })();
+        analytics.utils.loadScript('//static.getclicky.com/js');
     },
 
 

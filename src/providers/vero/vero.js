@@ -15,21 +15,10 @@ analytics.addProvider('Vero', {
         settings = analytics.utils.resolveSettings(settings, 'apiKey');
         analytics.utils.extend(this.settings, settings);
 
-        var self = this;
-
         var _veroq = window._veroq = window._veroq || [];
-        _veroq.push(['init', {
-            api_key: settings.apiKey
-        }]);
-        (function(){
-            var ve = document.createElement('script');
-            ve.type = 'text/javascript';
-            ve.async = true;
-            var protocol = ('https:' == document.location.protocol) ? 'https:' : 'http:';
-            ve.src = protocol + '//www.getvero.com/assets/m.js';
-            var s = document.getElementsByTagName('script')[0];
-            s.parentNode.insertBefore(ve, s);
-        })();
+        _veroq.push(['init', { api_key: settings.apiKey }]);
+
+        analytics.utils.loadScript('//www.getvero.com/assets/m.js');
     },
 
 

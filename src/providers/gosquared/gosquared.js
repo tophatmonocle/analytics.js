@@ -24,19 +24,13 @@ analytics.addProvider('GoSquared', {
         settings = analytics.utils.resolveSettings(settings, 'siteToken');
         analytics.utils.extend(this.settings, settings);
 
-        var GoSquared = window.GoSquared = {};
-        GoSquared.acct = this.settings.siteToken;
-        GoSquared.q = [];
+        window.GoSquared = {
+            acct : this.settings.siteToken,
+            q    : []
+        };
+        window._gstc_lt =+ (new Date());
 
-        window._gstc_lt =+ (new Date);
-        var d = document;
-        var g = d.createElement('script');
-        g.type = 'text/javascript';
-        g.async = true;
-        var protocol = ('https:' == d.location.protocol) ? 'https:' : 'http:';
-        g.src = protocol + '//d1l6p2sc9645hc.cloudfront.net/tracker.js';
-        var s = d.getElementsByTagName('script')[0];
-        s.parentNode.insertBefore(g, s);
+        analytics.utils.loadScript('//d1l6p2sc9645hc.cloudfront.net/tracker.js');
     },
 
 

@@ -22,15 +22,7 @@ analytics.addProvider('FoxMetrics', {
         var _fxm = window._fxm || {};
         window._fxm = _fxm.events || [];
 
-        function _fxms(id) {
-            (function () {
-                var fxms = document.createElement('script'); fxms.type = 'text/javascript'; fxms.async = true;
-                fxms.src = ('https:' == document.location.protocol ? 'https://' : 'http://') + 'd35tca7vmefkrc.cloudfront.net/scripts/' + id + '.js';
-                var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(fxms, s);
-            })();
-        }
-
-        _fxms(this.settings.appId);
+        analytics.utils.loadScript('//d35tca7vmefkrc.cloudfront.net/scripts/' + this.settings.appId + '.js');
     },
 
 

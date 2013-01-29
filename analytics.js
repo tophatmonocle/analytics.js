@@ -335,6 +335,34 @@
 
         utils : {
 
+            // A helper to asynchronously load a script by append a script
+            // element to the DOM. Used in JS snippets.
+            loadScript : function (options) {
+                // Allow for the simplest case, just passing a url fragment.
+                if (this.isString(options)) options = { fragment : options };
+
+                var script = document.createElement('script');
+                script.type  = 'text/javascript';
+                script.async = true;
+
+                // Handle optional attributes on the script.
+                if (options.id) script.id = options.id;
+                if (options.attributes) {
+                    for (var attr in options.attributes) {
+                        script.setAttribute(attr, options.attributes[attr]);
+                    }
+                }
+
+                // Based on the protocol, allow for a simple fragment that is
+                // the same regardless, or URLs specific to each protocol.
+                var protocol = 'https:' === document.location.protocol ? 'https:' : 'http:';
+                if (protocol === 'https:') {
+                    script.src = (protocol + options.fragment) || options.https;
+                } else {
+                    script.src = (protocol + options.fragment) || options.http;
+                }
+            },
+
             // Attach an event handler to a DOM element, even in IE.
             bind : function (el, event, callback) {
                 if (el.addEventListener) {
@@ -538,11 +566,7 @@ analytics.addProvider('Bitdeli', {
         _bdq.push(["setAccount", this.settings.inputId, this.settings.authToken]);
         if (this.settings.initialPageview) _bdq.push(["trackPageview"]);
 
-        (function() {
-            var bd = document.createElement("script"); bd.type = "text/javascript"; bd.async = true;
-            bd.src = ("https:" == document.location.protocol ? "https://" : "http://") + "d2flrkr957qc5j.cloudfront.net/bitdeli.min.js";
-            var s = document.getElementsByTagName("script")[0]; s.parentNode.insertBefore(bd, s);
-        })();
+        analytics.utils.loadScript('d2flrkr957qc5j.cloudfront.net/bitdeli.min.js');
     },
 
 
@@ -606,20 +630,14 @@ analytics.addProvider('Chartbeat', {
         // Chartbeat `_sf_async_config` variable with settings.
         window._sf_async_config = this.settings || {};
 
-        (function(){
-            // Use the stored date from when we were loaded.
-            window._sf_endpt = analytics.date.getTime();
-            var f = document.getElementsByTagName('script')[0];
-            var e = document.createElement('script');
-            e.setAttribute('language', 'javascript');
-            e.setAttribute('type', 'text/javascript');
-            e.setAttribute('src',
-                (('https:' === document.location.protocol) ?
-                    'https://a248.e.akamai.net/chartbeat.download.akamai.com/102508/' :
-                    'http://static.chartbeat.com/') +
-                'js/chartbeat.js');
-            f.parentNode.insertBefore(e, f);
-        })();
+        // Chartbeat needs the stored time when the page was first rendered, so
+        // it can calculate page load times for the user/server.
+        window._sf_endpt = analytics.date.getTime();
+
+        analytics.utils.loadScript({
+            http  : 'http://static.chartbeat.com/js/chartbeat.js',
+            https : 'https://a248.e.akamai.net/chartbeat.download.akamai.com/102508/js/chartbeat.js'
+        });
     },
 
 
@@ -654,14 +672,7 @@ analytics.addProvider('Clicky', {
         var clicky_site_ids = window.clicky_site_ids = window.clicky_site_ids || [];
         clicky_site_ids.push(settings.siteId);
 
-        (function() {
-            var s = document.createElement('script');
-            s.type = 'text/javascript';
-            s.async = true;
-            var protocol = ('https:' == document.location.protocol) ? 'https:' : 'http:';
-            s.src = protocol + '//static.getclicky.com/js';
-            (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(s);
-        })();
+        analytics.utils.loadScript('//static.getclicky.com/js');
     },
 
 
@@ -699,16 +710,10 @@ analytics.addProvider('comScore', {
         var _comscore = window._comscore = window._comscore || [];
         _comscore.push(this.settings);
 
-        (function() {
-            var s = document.createElement('script');
-            var el = document.getElementsByTagName('script')[0];
-            s.async = true;
-            s.src = (document.location.protocol == 'https:' ? 'https://sb' : 'http://b') + '.scorecardresearch.com/beacon.js';
-            el.parentNode.insertBefore(s, el);
-        })();
-
-        // NOTE: the <noscript><img> bit in the docs is ignored
-        // because we have to run JS in order to do any of this!
+        analytics.utils.loadScript({
+            http  : 'http://b.scorecardresearch.com/beacon.js',
+            https : 'https://sb.scorecardresearch.com/beacon.js'
+        });
     }
 
 });
@@ -735,16 +740,8 @@ analytics.addProvider('CrazyEgg', {
         settings = analytics.utils.resolveSettings(settings, 'apiKey');
         analytics.utils.extend(this.settings, settings);
 
-        var apiKey = this.settings.apiKey;
-        (function(){
-            var a = document.createElement('script');
-            var b = document.getElementsByTagName('script')[0];
-            var protocol = ('https:' == document.location.protocol) ? 'https:' : 'http:';
-            a.src = protocol+'//dnn506yrbagrg.cloudfront.net/pages/scripts/'+apiKey+'.js?'+Math.floor(new Date().getTime()/3600000);
-            a.async = true;
-            a.type = 'text/javascript';
-            b.parentNode.insertBefore(a,b);
-        })();
+        var fragment = '//dnn506yrbagrg.cloudfront.net/pages/scripts/' + this.settings.apiKey + '.js?' + Math.floor(new Date().getTime()/3600000);
+        analytics.utils.loadScript(fragment);
     }
 
 });
@@ -764,7 +761,7 @@ analytics.addProvider('Customer.io', {
     // Initialize
     // ----------
 
-    // Changes to the Chartbeat snippet:
+    // Changes to the Customer.io snippet:
     //
     // * Add `siteId`.
     initialize : function (settings) {
@@ -785,15 +782,14 @@ analytics.addProvider('Customer.io', {
             for (c = 0; c < b.length; c++) {
                 _cio[b[c]] = a(b[c]);
             }
-            var t = document.createElement('script'),
-                s = document.getElementsByTagName('script')[0];
-            t.async = true;
-            t.id    = 'cio-tracker';
-            t.setAttribute('data-site-id', self.settings.siteId);
-            t.src = 'https://assets.customer.io/assets/track.js';
-            s.parentNode.insertBefore(t, s);
         })();
 
+        analytics.utils.loadScript({
+            http           : 'https://assets.customer.io/assets/track.js',
+            https          : 'https://assets.customer.io/assets/track.js',
+            id             : 'cio-tracker',
+            'data-site-id' : this.settings.sideId
+        });
     },
 
 
@@ -864,16 +860,9 @@ analytics.addProvider('Errorception', {
             a.onerror = function () {
                 _errs.push(arguments);
             };
-            var d = function () {
-                var a = b.createElement('script'),
-                    c = b.getElementsByTagName('script')[0],
-                    protocol = ('https:' == document.location.protocol) ? 'https:' : 'http:';
-                a.src = protocol + '//d15qhc0lu1ghnk.cloudfront.net/beacon.js';
-                a.async = true;
-                c.parentNode.insertBefore(a,c);
-            };
-            a.addEventListener ? a.addEventListener('load', d, !1) : a.attachEvent('onload', d);
         })(window,document);
+
+        analytics.utils.loadScript('//d15qhc0lu1ghnk.cloudfront.net/beacon.js');
     },
 
 
@@ -917,15 +906,7 @@ analytics.addProvider('FoxMetrics', {
         var _fxm = window._fxm || {};
         window._fxm = _fxm.events || [];
 
-        function _fxms(id) {
-            (function () {
-                var fxms = document.createElement('script'); fxms.type = 'text/javascript'; fxms.async = true;
-                fxms.src = ('https:' == document.location.protocol ? 'https://' : 'http://') + 'd35tca7vmefkrc.cloudfront.net/scripts/' + id + '.js';
-                var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(fxms, s);
-            })();
-        }
-
-        _fxms(this.settings.appId);
+        analytics.utils.loadScript('//d35tca7vmefkrc.cloudfront.net/scripts/' + this.settings.appId + '.js');
     },
 
 
@@ -1022,11 +1003,11 @@ analytics.addProvider('Google Analytics', {
         }
         _gaq.push(['_trackPageview', canonicalUrl]);
 
-        (function() {
-            var ga = document.createElement('script'); ga.type = 'text/javascript'; ga.async = true;
-            ga.src = ('https:' === document.location.protocol ? 'https://ssl' : 'http://www') + '.google-analytics.com/ga.js';
-            var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(ga, s);
-        })();
+
+        analytics.utils.loadScript({
+            http  : 'http://www.google-analytics.com/ga.js',
+            https : 'https://ssl.google-analytics.com/ga.js'
+        });
     },
 
 
@@ -1087,17 +1068,13 @@ analytics.addProvider('Gauges', {
 
         var _gauges = window._gauges = window._gauges || [];
 
-        (function() {
-            var t   = document.createElement('script');
-            t.type  = 'text/javascript';
-            t.async = true;
-            t.id    = 'gauges-tracker';
-            t.setAttribute('data-site-id', settings.siteId);
-            var protocol = ('https:' == document.location.protocol) ? 'https:' : 'http:';
-            t.src = protocol + '//secure.gaug.es/track.js';
-            var s = document.getElementsByTagName('script')[0];
-            s.parentNode.insertBefore(t, s);
-        })();
+        analytics.utils.loadScript({
+            fragment   : '//secure.gaug.es/track.js',
+            id         : 'gauges-tracker',
+            attributes : {
+                'data-site-id' : settings.siteId
+            }
+        });
     },
 
 
@@ -1137,19 +1114,13 @@ analytics.addProvider('GoSquared', {
         settings = analytics.utils.resolveSettings(settings, 'siteToken');
         analytics.utils.extend(this.settings, settings);
 
-        var GoSquared = window.GoSquared = {};
-        GoSquared.acct = this.settings.siteToken;
-        GoSquared.q = [];
+        window.GoSquared = {
+            acct : this.settings.siteToken,
+            q    : []
+        };
+        window._gstc_lt =+ (new Date());
 
-        window._gstc_lt =+ (new Date);
-        var d = document;
-        var g = d.createElement('script');
-        g.type = 'text/javascript';
-        g.async = true;
-        var protocol = ('https:' == d.location.protocol) ? 'https:' : 'http:';
-        g.src = protocol + '//d1l6p2sc9645hc.cloudfront.net/tracker.js';
-        var s = d.getElementsByTagName('script')[0];
-        s.parentNode.insertBefore(g, s);
+        analytics.utils.loadScript('//d1l6p2sc9645hc.cloudfront.net/tracker.js');
     },
 
 
@@ -1208,15 +1179,7 @@ analytics.addProvider('HitTail', {
         settings = analytics.utils.resolveSettings(settings, 'siteId');
         analytics.utils.extend(this.settings, settings);
 
-        var siteId = settings.siteId;
-        (function(){
-            var ht = document.createElement('script');
-            ht.async = true;
-            ht.type = 'text/javascript';
-            ht.src = ('https:' == document.location.protocol ? 'https://' : 'http://') + siteId + '.hittail.com/mlt.js';
-            var s = document.getElementsByTagName('script')[0];
-            s.parentNode.insertBefore(ht, s);
-        })();
+        analytics.utils.loadScript('//' + this.settings.siteId + '.hittail.com/mlt.js');
     }
 
 });
@@ -1243,17 +1206,14 @@ analytics.addProvider('HubSpot', {
         settings = analytics.utils.resolveSettings(settings, 'portalId');
         analytics.utils.extend(this.settings, settings);
 
-        var self = this;
+        window._hsq = window._hsq || [];
 
-        (function(d,s,i,r) {
-            if (d.getElementById(i)){return;}
-            window._hsq = window._hsq || []; // for calls pre-load
-            var n = d.createElement(s),
-                e = d.getElementsByTagName(s)[0];
-            n.id = i;
-            n.src = 'https://js.hubspot.com/analytics/' + (Math.ceil(new Date()/r)*r) + '/' + self.settings.portalId + '.js';
-            e.parentNode.insertBefore(n, e);
-        })(document, 'script', 'hs-analytics', 300000);
+        var url = 'https://js.hubspot.com/analytics/' + (Math.ceil(new Date()/300000)*300000) + '/' + this.settings.portalId + '.js';
+        analytics.utils.loadScript({
+            id    : 'hs-analytics',
+            http  : url,
+            https : url
+        });
     },
 
 
@@ -1355,18 +1315,10 @@ analytics.addProvider('Intercom', {
             };
         }
 
-        function async_load() {
-            var s = document.createElement('script');
-            s.type = 'text/javascript'; s.async = true;
-            s.src = 'https://api.intercom.io/api/js/library.js';
-            var x = document.getElementsByTagName('script')[0];
-            x.parentNode.insertBefore(s, x);
-        }
-        if (window.attachEvent) {
-            window.attachEvent('onload', async_load);
-        } else {
-            window.addEventListener('load', async_load, false);
-        }
+        analytics.utils.loadScript({
+            http  : 'https://api.intercom.io/api/js/library.js',
+            https : 'https://api.intercom.io/api/js/library.js'
+        });
     }
 
 });
@@ -1455,20 +1407,9 @@ analytics.addProvider('KISSmetrics', {
         analytics.utils.extend(this.settings, settings);
 
         var _kmq = window._kmq = window._kmq || [];
-        function _kms(u){
-            setTimeout(function(){
-                var d = document,
-                    f = d.getElementsByTagName('script')[0],
-                    s = d.createElement('script');
-                s.type = 'text/javascript';
-                s.async = true;
-                var protocol = ('https:' == document.location.protocol) ? 'https:' : 'http:';
-                s.src = protocol + u;
-                f.parentNode.insertBefore(s, f);
-            }, 1);
-        }
-        _kms('//i.kissmetrics.com/i.js');
-        _kms('//doug1izaerwt3.cloudfront.net/'+this.settings.apiKey+'.1.js');
+
+        analytics.utils.loadScript('//i.kissmetrics.com/i.js');
+        analytics.utils.loadScript('//doug1izaerwt3.cloudfront.net/' + this.settings.apiKey + '.1.js');
     },
 
 
@@ -1517,15 +1458,8 @@ analytics.addProvider('Klaviyo', {
 
         var _learnq = window._learnq = window._learnq || [];
         _learnq.push(['account', this.settings.apiKey]);
-        (function () {
-            var b = document.createElement('script');
-            b.type = 'text/javascript';
-            b.async = true;
-            b.src = ('https:' == document.location.protocol ? 'https://' : 'http://') +
-                'a.klaviyo.com/media/js/learnmarklet.js';
-            var a = document.getElementsByTagName('script')[0];
-            a.parentNode.insertBefore(b, a);
-        })();
+
+        analytics.utils.loadScript('//a.klaviyo.com/media/js/learnmarklet.js');
     },
 
 
@@ -1784,20 +1718,12 @@ analytics.addProvider('Quantcast', {
         analytics.utils.extend(this.settings, settings);
 
         var _qevents = window._qevents = window._qevents || [];
+        _qevents.push({ qacct: settings.pCode });
 
-        (function() {
-           var elem = document.createElement('script');
-           elem.src = (document.location.protocol == 'https:' ? 'https://secure' : 'http://edge') + '.quantserve.com/quant.js';
-           elem.async = true;
-           elem.type = 'text/javascript';
-           var scpt = document.getElementsByTagName('script')[0];
-           scpt.parentNode.insertBefore(elem, scpt);  
-        })();
-
-        _qevents.push({qacct: settings.pCode});
-
-        // NOTE: the <noscript><div><img> bit in the docs is ignored
-        // because we have to run JS in order to do any of this!
+        analytics.utils.loadScript({
+            http  : 'http://edge.quantserve.com/quant.js',
+            https : 'https://secure.quantserve.com/quant.js'
+        });
     }
 
 });
@@ -1824,15 +1750,7 @@ analytics.addProvider('SnapEngage', {
         settings = analytics.utils.resolveSettings(settings, 'apiKey');
         analytics.utils.extend(this.settings, settings);
 
-        var self = this;
-        (function() {
-            var se = document.createElement('script');
-            se.type = 'text/javascript';
-            se.async = true;
-            var protocol = ('https:' == document.location.protocol) ? 'https:' : 'http:';
-            se.src = protocol + '//commondatastorage.googleapis.com/code.snapengage.com/js/'+self.settings.apiKey+'.js';
-            var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(se, s);
-        })();
+        analytics.utils.loadScript('//commondatastorage.googleapis.com/code.snapengage.com/js/' + this.settings.apiKey + '.js');
     }
 
 });
@@ -1857,16 +1775,9 @@ analytics.addProvider('USERcycle', {
         analytics.utils.extend(this.settings, settings);
 
         var _uc = window._uc = window._uc || [];
-        (function(){
-            var e = document.createElement('script');
-            e.setAttribute('type', 'text/javascript');
-            var protocol = 'https:' == document.location.protocol ? 'https://' : 'http://';
-            e.setAttribute('src', protocol+'api.usercycle.com/javascripts/track.js');
-            var f = document.getElementsByTagName('script')[0];
-            f.parentNode.insertBefore(e, f);
-        })();
-
         window._uc.push(['_key', settings.key]);
+
+        analytics.utils.loadScript('//api.usercycle.com/javascripts/track.js');
     },
 
 
@@ -1905,21 +1816,10 @@ analytics.addProvider('Vero', {
         settings = analytics.utils.resolveSettings(settings, 'apiKey');
         analytics.utils.extend(this.settings, settings);
 
-        var self = this;
-
         var _veroq = window._veroq = window._veroq || [];
-        _veroq.push(['init', {
-            api_key: settings.apiKey
-        }]);
-        (function(){
-            var ve = document.createElement('script');
-            ve.type = 'text/javascript';
-            ve.async = true;
-            var protocol = ('https:' == document.location.protocol) ? 'https:' : 'http:';
-            ve.src = protocol + '//www.getvero.com/assets/m.js';
-            var s = document.getElementsByTagName('script')[0];
-            s.parentNode.insertBefore(ve, s);
-        })();
+        _veroq.push(['init', { api_key: settings.apiKey }]);
+
+        analytics.utils.loadScript('//www.getvero.com/assets/m.js');
     },
 
 

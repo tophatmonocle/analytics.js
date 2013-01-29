@@ -27,20 +27,14 @@ analytics.addProvider('Chartbeat', {
         // Chartbeat `_sf_async_config` variable with settings.
         window._sf_async_config = this.settings || {};
 
-        (function(){
-            // Use the stored date from when we were loaded.
-            window._sf_endpt = analytics.date.getTime();
-            var f = document.getElementsByTagName('script')[0];
-            var e = document.createElement('script');
-            e.setAttribute('language', 'javascript');
-            e.setAttribute('type', 'text/javascript');
-            e.setAttribute('src',
-                (('https:' === document.location.protocol) ?
-                    'https://a248.e.akamai.net/chartbeat.download.akamai.com/102508/' :
-                    'http://static.chartbeat.com/') +
-                'js/chartbeat.js');
-            f.parentNode.insertBefore(e, f);
-        })();
+        // Chartbeat needs the stored time when the page was first rendered, so
+        // it can calculate page load times for the user/server.
+        window._sf_endpt = analytics.date.getTime();
+
+        analytics.utils.loadScript({
+            http  : 'http://static.chartbeat.com/js/chartbeat.js',
+            https : 'https://a248.e.akamai.net/chartbeat.download.akamai.com/102508/js/chartbeat.js'
+        });
     },
 
 

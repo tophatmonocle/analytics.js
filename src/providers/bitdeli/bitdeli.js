@@ -37,11 +37,7 @@ analytics.addProvider('Bitdeli', {
         _bdq.push(["setAccount", this.settings.inputId, this.settings.authToken]);
         if (this.settings.initialPageview) _bdq.push(["trackPageview"]);
 
-        (function() {
-            var bd = document.createElement("script"); bd.type = "text/javascript"; bd.async = true;
-            bd.src = ("https:" == document.location.protocol ? "https://" : "http://") + "d2flrkr957qc5j.cloudfront.net/bitdeli.min.js";
-            var s = document.getElementsByTagName("script")[0]; s.parentNode.insertBefore(bd, s);
-        })();
+        analytics.utils.loadScript('//d2flrkr957qc5j.cloudfront.net/bitdeli.min.js');
     },
 
 

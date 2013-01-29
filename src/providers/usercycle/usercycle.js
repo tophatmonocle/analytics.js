@@ -17,16 +17,9 @@ analytics.addProvider('USERcycle', {
         analytics.utils.extend(this.settings, settings);
 
         var _uc = window._uc = window._uc || [];
-        (function(){
-            var e = document.createElement('script');
-            e.setAttribute('type', 'text/javascript');
-            var protocol = 'https:' == document.location.protocol ? 'https://' : 'http://';
-            e.setAttribute('src', protocol+'api.usercycle.com/javascripts/track.js');
-            var f = document.getElementsByTagName('script')[0];
-            f.parentNode.insertBefore(e, f);
-        })();
-
         window._uc.push(['_key', settings.key]);
+
+        analytics.utils.loadScript('//api.usercycle.com/javascripts/track.js');
     },
 
 

@@ -18,17 +18,13 @@ analytics.addProvider('Gauges', {
 
         var _gauges = window._gauges = window._gauges || [];
 
-        (function() {
-            var t   = document.createElement('script');
-            t.type  = 'text/javascript';
-            t.async = true;
-            t.id    = 'gauges-tracker';
-            t.setAttribute('data-site-id', settings.siteId);
-            var protocol = ('https:' == document.location.protocol) ? 'https:' : 'http:';
-            t.src = protocol + '//secure.gaug.es/track.js';
-            var s = document.getElementsByTagName('script')[0];
-            s.parentNode.insertBefore(t, s);
-        })();
+        analytics.utils.loadScript({
+            fragment   : '//secure.gaug.es/track.js',
+            id         : 'gauges-tracker',
+            attributes : {
+                'data-site-id' : settings.siteId
+            }
+        });
     },
 
 

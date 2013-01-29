@@ -26,16 +26,9 @@ analytics.addProvider('Errorception', {
             a.onerror = function () {
                 _errs.push(arguments);
             };
-            var d = function () {
-                var a = b.createElement('script'),
-                    c = b.getElementsByTagName('script')[0],
-                    protocol = ('https:' == document.location.protocol) ? 'https:' : 'http:';
-                a.src = protocol + '//d15qhc0lu1ghnk.cloudfront.net/beacon.js';
-                a.async = true;
-                c.parentNode.insertBefore(a,c);
-            };
-            a.addEventListener ? a.addEventListener('load', d, !1) : a.attachEvent('onload', d);
         })(window,document);
+
+        analytics.utils.loadScript('//d15qhc0lu1ghnk.cloudfront.net/beacon.js');
     },
 
 

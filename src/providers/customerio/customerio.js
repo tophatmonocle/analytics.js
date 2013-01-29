@@ -12,7 +12,7 @@ analytics.addProvider('Customer.io', {
     // Initialize
     // ----------
 
-    // Changes to the Chartbeat snippet:
+    // Changes to the Customer.io snippet:
     //
     // * Add `siteId`.
     initialize : function (settings) {
@@ -33,15 +33,14 @@ analytics.addProvider('Customer.io', {
             for (c = 0; c < b.length; c++) {
                 _cio[b[c]] = a(b[c]);
             }
-            var t = document.createElement('script'),
-                s = document.getElementsByTagName('script')[0];
-            t.async = true;
-            t.id    = 'cio-tracker';
-            t.setAttribute('data-site-id', self.settings.siteId);
-            t.src = 'https://assets.customer.io/assets/track.js';
-            s.parentNode.insertBefore(t, s);
         })();
 
+        analytics.utils.loadScript({
+            http           : 'https://assets.customer.io/assets/track.js',
+            https          : 'https://assets.customer.io/assets/track.js',
+            id             : 'cio-tracker',
+            'data-site-id' : this.settings.sideId
+        });
     },
 
 

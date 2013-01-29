@@ -19,17 +19,14 @@ analytics.addProvider('HubSpot', {
         settings = analytics.utils.resolveSettings(settings, 'portalId');
         analytics.utils.extend(this.settings, settings);
 
-        var self = this;
+        window._hsq = window._hsq || [];
 
-        (function(d,s,i,r) {
-            if (d.getElementById(i)){return;}
-            window._hsq = window._hsq || []; // for calls pre-load
-            var n = d.createElement(s),
-                e = d.getElementsByTagName(s)[0];
-            n.id = i;
-            n.src = 'https://js.hubspot.com/analytics/' + (Math.ceil(new Date()/r)*r) + '/' + self.settings.portalId + '.js';
-            e.parentNode.insertBefore(n, e);
-        })(document, 'script', 'hs-analytics', 300000);
+        var url = 'https://js.hubspot.com/analytics/' + (Math.ceil(new Date()/300000)*300000) + '/' + this.settings.portalId + '.js';
+        analytics.utils.loadScript({
+            id    : 'hs-analytics',
+            http  : url,
+            https : url
+        });
     },
 
 
