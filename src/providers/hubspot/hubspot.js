@@ -16,13 +16,13 @@ analytics.addProvider('HubSpot', {
     //
     // * Concatenate `portalId` into the URL.
     initialize : function (settings) {
-        settings = analytics.utils.resolveSettings(settings, 'portalId');
-        analytics.utils.extend(this.settings, settings);
+        settings = analytics._.resolveSettings(settings, 'portalId');
+        analytics._.extend(this.settings, settings);
 
         window._hsq = window._hsq || [];
 
         var url = 'https://js.hubspot.com/analytics/' + (Math.ceil(new Date()/300000)*300000) + '/' + this.settings.portalId + '.js';
-        analytics.utils.loadScript({
+        analytics._.loadScript({
             id    : 'hs-analytics',
             http  : url,
             https : url

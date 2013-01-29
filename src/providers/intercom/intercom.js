@@ -19,8 +19,8 @@ analytics.addProvider('Intercom', {
     // in `initialize`, we store the settings for later and initialize in
     // `identify`.
     initialize: function (settings) {
-        settings = analytics.utils.resolveSettings(settings, 'appId');
-        analytics.utils.extend(this.settings, settings);
+        settings = analytics._.resolveSettings(settings, 'appId');
+        analytics._.extend(this.settings, settings);
     },
 
 
@@ -48,11 +48,11 @@ analytics.addProvider('Intercom', {
         if (traits) {
             settings.email = traits.email;
             settings.name = traits.name;
-            settings.created_at = analytics.utils.getSeconds(traits.created);
+            settings.created_at = analytics._.getSeconds(traits.created);
         }
 
         // If they didn't pass an email, check to see if the `userId` qualifies.
-        if (analytics.utils.isEmail(userId) && (traits && !traits.email)) {
+        if (analytics._.isEmail(userId) && (traits && !traits.email)) {
             settings.email = userId;
         }
 
@@ -63,7 +63,7 @@ analytics.addProvider('Intercom', {
             };
         }
 
-        analytics.utils.loadScript({
+        analytics._.loadScript({
             http  : 'https://api.intercom.io/api/js/library.js',
             https : 'https://api.intercom.io/api/js/library.js'
         });

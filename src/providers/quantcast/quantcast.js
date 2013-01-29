@@ -13,13 +13,13 @@ analytics.addProvider('Quantcast', {
     // ----------
 
     initialize : function (settings) {
-        settings = analytics.utils.resolveSettings(settings, 'pCode');
-        analytics.utils.extend(this.settings, settings);
+        settings = analytics._.resolveSettings(settings, 'pCode');
+        analytics._.extend(this.settings, settings);
 
         var _qevents = window._qevents = window._qevents || [];
         _qevents.push({ qacct: settings.pCode });
 
-        analytics.utils.loadScript({
+        analytics._.loadScript({
             http  : 'http://edge.quantserve.com/quant.js',
             https : 'https://secure.quantserve.com/quant.js'
         });

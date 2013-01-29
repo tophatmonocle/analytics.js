@@ -16,10 +16,10 @@ analytics.addProvider('SnapEngage', {
     //
     // * Add `apiKey` from stored `settings`.
     initialize : function (settings) {
-        settings = analytics.utils.resolveSettings(settings, 'apiKey');
-        analytics.utils.extend(this.settings, settings);
+        settings = analytics._.resolveSettings(settings, 'apiKey');
+        analytics._.extend(this.settings, settings);
 
-        analytics.utils.loadScript('//commondatastorage.googleapis.com/code.snapengage.com/js/' + this.settings.apiKey + '.js');
+        analytics._.loadScript('//commondatastorage.googleapis.com/code.snapengage.com/js/' + this.settings.apiKey + '.js');
     }
 
 });

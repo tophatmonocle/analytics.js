@@ -28,8 +28,8 @@ analytics.addProvider('Mixpanel', {
     // We don't need to set the `mixpanel` object on `window` ourselves because
     // they already do that.
     initialize : function (settings) {
-        settings = analytics.utils.resolveSettings(settings, 'token');
-        analytics.utils.extend(this.settings, settings);
+        settings = analytics._.resolveSettings(settings, 'token');
+        analytics._.extend(this.settings, settings);
 
         (function (c, a) {
             window.mixpanel = a;
@@ -69,14 +69,14 @@ analytics.addProvider('Mixpanel', {
 
     identify : function (userId, traits) {
         // If we have an email and no email trait, set the email trait.
-        if (userId && analytics.utils.isEmail(userId) && (traits && !traits.email)) {
+        if (userId && analytics._.isEmail(userId) && (traits && !traits.email)) {
             traits || (traits = {});
             traits.email = userId;
         }
 
         // Alias the traits' keys with dollar signs for Mixpanel's API.
         if (traits) {
-            analytics.utils.alias(traits, {
+            analytics._.alias(traits, {
                 'created'   : '$created',
                 'email'     : '$email',
                 'firstName' : '$first_name',

@@ -17,13 +17,13 @@ analytics.addProvider('Klaviyo', {
     //
     // * Added `apiKey`.
     initialize : function (settings) {
-        settings = analytics.utils.resolveSettings(settings, 'apiKey');
-        analytics.utils.extend(this.settings, settings);
+        settings = analytics._.resolveSettings(settings, 'apiKey');
+        analytics._.extend(this.settings, settings);
 
         var _learnq = window._learnq = window._learnq || [];
         _learnq.push(['account', this.settings.apiKey]);
 
-        analytics.utils.loadScript('//a.klaviyo.com/media/js/learnmarklet.js');
+        analytics._.loadScript('//a.klaviyo.com/media/js/learnmarklet.js');
     },
 
 

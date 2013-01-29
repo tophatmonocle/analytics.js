@@ -21,8 +21,8 @@ analytics.addProvider('GoSquared', {
     // * Attach `GoSquared` to `window`.
 
     initialize : function (settings) {
-        settings = analytics.utils.resolveSettings(settings, 'siteToken');
-        analytics.utils.extend(this.settings, settings);
+        settings = analytics._.resolveSettings(settings, 'siteToken');
+        analytics._.extend(this.settings, settings);
 
         window.GoSquared = {
             acct : this.settings.siteToken,
@@ -30,7 +30,7 @@ analytics.addProvider('GoSquared', {
         };
         window._gstc_lt =+ (new Date());
 
-        analytics.utils.loadScript('//d1l6p2sc9645hc.cloudfront.net/tracker.js');
+        analytics._.loadScript('//d1l6p2sc9645hc.cloudfront.net/tracker.js');
     },
 
 

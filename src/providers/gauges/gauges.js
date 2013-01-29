@@ -13,12 +13,12 @@ analytics.addProvider('Gauges', {
     // ----------
 
     initialize : function (settings) {
-        settings = analytics.utils.resolveSettings(settings, 'siteId');
-        analytics.utils.extend(this.settings, settings);
+        settings = analytics._.resolveSettings(settings, 'siteId');
+        analytics._.extend(this.settings, settings);
 
         var _gauges = window._gauges = window._gauges || [];
 
-        analytics.utils.loadScript({
+        analytics._.loadScript({
             fragment   : '//secure.gaug.es/track.js',
             id         : 'gauges-tracker',
             attributes : {

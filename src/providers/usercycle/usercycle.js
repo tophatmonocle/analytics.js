@@ -13,13 +13,13 @@ analytics.addProvider('USERcycle', {
     // ----------
 
     initialize : function (settings) {
-        settings = analytics.utils.resolveSettings(settings, 'key');
-        analytics.utils.extend(this.settings, settings);
+        settings = analytics._.resolveSettings(settings, 'key');
+        analytics._.extend(this.settings, settings);
 
         var _uc = window._uc = window._uc || [];
         window._uc.push(['_key', settings.key]);
 
-        analytics.utils.loadScript('//api.usercycle.com/javascripts/track.js');
+        analytics._.loadScript('//api.usercycle.com/javascripts/track.js');
     },
 
 

@@ -12,13 +12,13 @@ analytics.addProvider('Vero', {
     // Initialize
     // ----------
     initialize : function (settings) {
-        settings = analytics.utils.resolveSettings(settings, 'apiKey');
-        analytics.utils.extend(this.settings, settings);
+        settings = analytics._.resolveSettings(settings, 'apiKey');
+        analytics._.extend(this.settings, settings);
 
         var _veroq = window._veroq = window._veroq || [];
         _veroq.push(['init', { api_key: settings.apiKey }]);
 
-        analytics.utils.loadScript('//www.getvero.com/assets/m.js');
+        analytics._.loadScript('//www.getvero.com/assets/m.js');
     },
 
 
@@ -36,7 +36,7 @@ analytics.addProvider('Vero', {
         traits.id = userId;
 
         // If there wasn't already an email and the userId is one, use it.
-        if (!traits.email && analytics.utils.isEmail(userId)) {
+        if (!traits.email && analytics._.isEmail(userId)) {
             traits.email = userId;
         }
 
