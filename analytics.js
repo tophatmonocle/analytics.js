@@ -5,8 +5,8 @@
 
 (function () {
 
-    // Setup
-    // -----
+    // Analytics
+    // =========
 
     // The `analytics` object that will be exposed to you on the global object.
     var analytics = {
@@ -40,8 +40,10 @@
 
         // Adds a provider to the list of available providers that can be
         // initialized.
-        addProvider : function (name, provider) {
-            this.initializableProviders[name] = provider;
+        addProvider : function (name, properties) {
+            // Take the methods and add them to a Provider class's prototype.
+            var Provider = analytics.Provider.extend(properties);
+            this.initializableProviders[name] = Provider;
         },
 
 
@@ -66,23 +68,23 @@
             this.providers = [];
             this.userId = null;
 
-            // Initialize each provider with the proper settings, and copy the
+            // Initialize each provider with the proper options, and copy the
             // provider into `this.providers`.
             for (var key in providers) {
-                var provider = this.initializableProviders[key];
-                var settings = providers[key];
-                if (!provider) throw new Error('Could not find a provider named "'+key+'"');
-                provider.initialize(settings);
-                this.providers.push(provider);
+                var Provider = this.initializableProviders[key];
+                if (!Provider) throw new Error('Could not find a provider named "'+key+'"');
+
+                var options = providers[key];
+                this.providers.push(new Provider(options));
             }
 
             // Update the initialized state that other methods rely on.
             this.initialized = true;
 
             // Try to use id and event parameters from the url
-            var userId = this.utils.getUrlParameter(window.location.search, 'ajs_uid');
+            var userId = this._.getUrlParameter(window.location.search, 'ajs_uid');
             if (userId) this.identify(userId);
-            var event = this.utils.getUrlParameter(window.location.search, 'ajs_event');
+            var event = this._.getUrlParameter(window.location.search, 'ajs_event');
             if (event) this.track(event);
         },
 
@@ -113,32 +115,33 @@
             if (!this.initialized) return;
 
             // Allow for not passing traits, but passing a callback.
-            if (this.utils.isFunction(traits)) {
+            if (this._.isFunction(traits)) {
                 callback = traits;
                 traits = null;
             }
 
             // Allow for identifying traits without setting a `userId`, for
             // anonymous users whose traits you learn.
-            if (this.utils.isObject(userId)) {
-                if (traits && this.utils.isFunction(traits)) callback = traits;
+            if (this._.isObject(userId)) {
+                if (traits && this._.isFunction(traits)) callback = traits;
                 traits = userId;
                 userId = null;
             }
 
-            // Cache the `userId`, or use saved one.
-            if (userId !== null)
+            // Cache the `userId` for next time, or use saved one.
+            if (userId !== null) {
                 this.userId = userId;
-            else
+            } else {
                 userId = this.userId;
+            }
 
             // Call `identify` on all of our enabled providers that support it.
             for (var i = 0, provider; provider = this.providers[i]; i++) {
-                if (!provider.identify) continue;
-                provider.identify(userId, this.utils.clone(traits));
+                if (provider.identify) provider.identify(userId, this._.clone(traits));
             }
 
-            if (callback && this.utils.isFunction(callback)) {
+            // If we have a callback, call it.
+            if (callback && this._.isFunction(callback)) {
                 setTimeout(callback, this.timeout);
             }
         },
@@ -169,18 +172,18 @@
             if (!this.initialized) return;
 
             // Allow for not passing properties, but passing a callback.
-            if (this.utils.isFunction(properties)) {
+            if (this._.isFunction(properties)) {
                 callback = properties;
                 properties = null;
             }
 
             // Call `track` on all of our enabled providers that support it.
             for (var i = 0, provider; provider = this.providers[i]; i++) {
-                if (!provider.track) continue;
-                provider.track(event, this.utils.clone(properties));
+                if (provider.track) provider.track(event, this._.clone(properties));
             }
 
-            if (callback && this.utils.isFunction(callback)) {
+            // If we have a callback, call it.
+            if (callback && this._.isFunction(callback)) {
                 setTimeout(callback, this.timeout);
             }
         },
@@ -205,18 +208,18 @@
 
             // Turn a single link into an array so that we're always handling
             // arrays, which allows for passing jQuery objects.
-            if (this.utils.isElement(link)) link = [link];
+            if (this._.isElement(link)) link = [link];
 
             // Bind to all the links in the array.
             for (var i = 0; i < link.length; i++) {
                 var self = this;
                 var el = link[i];
 
-                this.utils.bind(el, 'click', function (e) {
+                this._.bind(el, 'click', function (e) {
 
                     // Allow for properties to be a function. And pass it the
                     // link element that was clicked.
-                    if (self.utils.isFunction(properties)) properties = properties(el);
+                    if (self._.isFunction(properties)) properties = properties(el);
 
                     // Fire a normal track call.
                     self.track(event, properties);
@@ -231,7 +234,7 @@
                     //
                     // This might not cover all cases, but we'd rather throw out
                     // an event than miss a case that breaks the experience.
-                    if (el.href && el.target !== '_blank' && !self.utils.isMeta(e)) {
+                    if (el.href && el.target !== '_blank' && !self._.isMeta(e)) {
 
                         // Prevent the link's default redirect in all the sane
                         // browsers, and also IE.
@@ -270,18 +273,18 @@
 
             // Turn a single element into an array so that we're always handling
             // arrays, which allows for passing jQuery objects.
-            if (this.utils.isElement(form)) form = [form];
+            if (this._.isElement(form)) form = [form];
 
             // Bind to all the forms in the array.
             for (var i = 0; i < form.length; i++) {
                 var self = this;
                 var el = form[i];
 
-                this.utils.bind(el, 'submit', function (e) {
+                this._.bind(el, 'submit', function (e) {
 
                     // Allow for properties to be a function. And pass it the
                     // form element that was submitted.
-                    if (self.utils.isFunction(properties)) properties = properties(el);
+                    if (self._.isFunction(properties)) properties = properties(el);
 
                     // Fire a normal track call.
                     self.track(event, properties);
@@ -297,7 +300,7 @@
                     // time to get fired.
                     setTimeout(function () {
                         el.submit();
-                    }, this.timeout);
+                    }, self.timeout);
                 });
             }
         },
@@ -324,8 +327,7 @@
 
             // Call `pageview` on all of our enabled providers that support it.
             for (var i = 0, provider; provider = this.providers[i]; i++) {
-                if (!provider.pageview) continue;
-                provider.pageview(url);
+                if (provider.pageview) provider.pageview(url);
             }
         },
 
@@ -333,43 +335,78 @@
         // Utils
         // -----
 
-        utils : {
+        _ : {
 
-            // A helper to asynchronously load a script by append a script
-            // element to the DOM. Used in JS snippets.
-            loadScript : function (options) {
-                // Allow for the simplest case, just passing a url fragment.
-                if (this.isString(options)) options = { fragment : options };
-
-                var script = document.createElement('script');
-                script.type  = 'text/javascript';
-                script.async = true;
-
-                // Handle optional attributes on the script.
-                if (options.id) script.id = options.id;
-                if (options.attributes) {
-                    for (var attr in options.attributes) {
-                        script.setAttribute(attr, options.attributes[attr]);
-                    }
-                }
-
-                // Based on the protocol, allow for a simple fragment that is
-                // the same regardless, or URLs specific to each protocol.
-                var protocol = 'https:' === document.location.protocol ? 'https:' : 'http:';
-                if (protocol === 'https:') {
-                    script.src = (protocol + options.fragment) || options.https;
-                } else {
-                    script.src = (protocol + options.fragment) || options.http;
-                }
-            },
-
-            // Attach an event handler to a DOM element, even in IE.
+            // Attach an event handler to a DOM element. Yes, even in IE.
             bind : function (el, event, callback) {
                 if (el.addEventListener) {
                     el.addEventListener(event, callback, false);
                 } else if (el.attachEvent) {
                     el.attachEvent('on' + event, callback);
                 }
+            },
+
+            // A helper to extend objects with properties from other objects.
+            // Based on the [underscore method](https://github.com/documentcloud/underscore/blob/master/underscore.js#L763).
+            extend : function (obj) {
+                var args = Array.prototype.slice.call(arguments, 1);
+                for (var i = 0, source; source = args[i]; i++) {
+                    for (var property in source) {
+                        obj[property] = source[property];
+                    }
+                }
+                return obj;
+            },
+
+            // A helper to shallow-ly clone objects, so that they don't get
+            // mangled by different analytics providers because of the
+            // reference.
+            clone : function (obj) {
+                if (!obj) return;
+                return this.extend({}, obj);
+            },
+
+            // A helper to alias certain object's keys to different key names.
+            // Useful for abstracting over providers that require specific keys.
+            alias : function (obj, aliases) {
+                for (var prop in aliases) {
+                    var alias = aliases[prop];
+                    if (obj[prop] !== undefined) {
+                        obj[alias] = obj[prop];
+                        delete obj[prop];
+                    }
+                }
+            },
+
+            // Type detection helpers, copied from [underscore](https://github.com/documentcloud/underscore/blob/master/underscore.js#L926-L946).
+            isElement : function(obj) {
+                return !!(obj && obj.nodeType === 1);
+            },
+            isObject : function (obj) {
+                return obj === Object(obj);
+            },
+            isArray : Array.isArray || function (obj) {
+                return Object.prototype.toString.call(obj) === '[object Array]';
+            },
+            isString : function (obj) {
+                return Object.prototype.toString.call(obj) === '[object String]';
+            },
+            isFunction : function (obj) {
+                return Object.prototype.toString.call(obj) === '[object Function]';
+            },
+            isNumber : function (obj) {
+                return Object.prototype.toString.call(obj) === '[object Number]';
+            },
+
+            // Email detection helper to loosely validate emails.
+            isEmail : function (string) {
+                return (/.+\@.+\..+/).test(string);
+            },
+
+            // Given a timestamp, return its value in seconds. For providers
+            // that rely on Unix time instead of millis.
+            getSeconds : function (time) {
+                return Math.floor((new Date(time)) / 1000);
             },
 
             // Given a DOM event, tell us whether a meta key or button was
@@ -391,95 +428,6 @@
                 return false;
             },
 
-            // Given a timestamp, return its value in seconds. For providers
-            // that rely on Unix time instead of millis.
-            getSeconds : function (time) {
-                return Math.floor((new Date(time)) / 1000);
-            },
-
-            // A helper to extend objects with properties from other objects.
-            // Based off of the [underscore](https://github.com/documentcloud/underscore/blob/master/underscore.js#L763)
-            // method.
-            extend : function (obj) {
-                var args = Array.prototype.slice.call(arguments, 1);
-                for (var i = 0, source; source = args[i]; i++) {
-                    for (var property in source) {
-                        obj[property] = source[property];
-                    }
-                }
-                return obj;
-            },
-
-            // A helper to shallow-ly clone objects, so that they don't get
-            // mangled by different analytics providers because of the
-            // reference.
-            clone : function (obj) {
-                if (!obj) return;
-                return this.extend({}, obj);
-            },
-
-            // A helper to alias certain object's keys to different key names.
-            // Useful for abstracting over providers that require specific key
-            // names.
-            alias : function (obj, aliases) {
-                for (var prop in aliases) {
-                    var alias = aliases[prop];
-                    if (obj[prop] !== undefined) {
-                        obj[alias] = obj[prop];
-                        delete obj[prop];
-                    }
-                }
-            },
-
-            // Type detection helpers, copied from
-            // [underscore](https://github.com/documentcloud/underscore/blob/master/underscore.js#L926-L946).
-            isElement : function(obj) {
-                return !!(obj && obj.nodeType === 1);
-            },
-            isArray : Array.isArray || function (obj) {
-                return Object.prototype.toString.call(obj) === '[object Array]';
-            },
-            isObject : function (obj) {
-                return obj === Object(obj);
-            },
-            isString : function (obj) {
-                return Object.prototype.toString.call(obj) === '[object String]';
-            },
-            isFunction : function (obj) {
-                return Object.prototype.toString.call(obj) === '[object Function]';
-            },
-            isNumber : function (obj) {
-                return Object.prototype.toString.call(obj) === '[object Number]';
-            },
-
-            // Email detection helper to loosely validate emails.
-            isEmail : function (string) {
-                return (/.+\@.+\..+/).test(string);
-            },
-
-            // A helper to resolve a settings object. It allows for `settings`
-            // to be a string in the case of using the shorthand where just an
-            // api key is passed. `fieldName` is what the provider calls their
-            // api key.
-            resolveSettings : function (settings, fieldName) {
-                if (!this.isString(settings) && !this.isObject(settings))
-                    throw new Error('Could not resolve settings.');
-                if (!fieldName)
-                    throw new Error('You must provide an api key field name.');
-
-                // Allow for settings to just be an API key, for example:
-                //
-                //     { 'Google Analytics : 'UA-XXXXXXX-X' }
-                if (this.isString(settings)) {
-                    var apiKey = settings;
-                    settings = {};
-                    settings[fieldName] = apiKey;
-                }
-
-                return settings;
-            },
-
-            // A helper to track events based on the 'anjs' url parameter
             getUrlParameter : function (urlSearchParameter, paramKey) {
                 var params = urlSearchParameter.replace('?', '').split('&');
                 for (var i = 0; i < params.length; i += 1) {
@@ -506,12 +454,45 @@
                     search   : a.search,
                     query    : a.search.slice(1)
                 };
+            },
+
+            // A helper to asynchronously load a script by appending a script
+            // element to the DOM. This way we don't need to keep repeating all that
+            // crufty Javascript snippet code.
+            loadScript : function (options) {
+                // Allow for the simplest case, just passing a url fragment.
+                if (this.isString(options)) options = { fragment : options };
+
+                // Make the async script element.
+                var script = document.createElement('script');
+                script.type = 'text/javascript';
+                script.async = true;
+
+                // Handle optional attributes on the script.
+                if (options.id) script.id = options.id;
+                if (options.attributes) {
+                    for (var attr in options.attributes) {
+                        script.setAttribute(attr, options.attributes[attr]);
+                    }
+                }
+
+                // Based on the protocol, allow for a simple fragment that is
+                // the same regardless, or URLs specific to each protocol.
+                var protocol = 'https:' === document.location.protocol ? 'https:' : 'http:';
+                if (protocol === 'https:') {
+                    script.src = options.https || (protocol + options.fragment);
+                } else {
+                    script.src = options.http || (protocol + options.fragment);
+                }
+
+                // Attach the script to the DOM.
+                var firstScript = document.getElementsByTagName('script')[0];
+                firstScript.parentNode.insertBefore(script, firstScript);
             }
         }
-
     };
 
-    // Add `trackClick` and `trackSubmit` for backwards compatibility.
+    // Alias `trackClick` and `trackSubmit` for backwards compatibility.
     analytics.trackClick = analytics.trackLink;
     analytics.trackSubmit = analytics.trackForm;
 
@@ -520,58 +501,98 @@
     var oldonload = window.onload;
     window.onload = function () {
         analytics.loaded = true;
-        if (analytics.utils.isFunction(oldonload)) oldonload();
+        if (analytics._.isFunction(oldonload)) oldonload();
     };
 
+
+
+    // Provider
+    // ========
+
+    // Setup the Provider constructor.
+    var Provider = analytics.Provider = function (options) {
+        // Allow for `options` to only be a string if the provider has specified
+        // a default `key`, in which case convert `options` into a dictionary.
+        if (analytics._.isString(options) && this.key) {
+            var key = options;
+            options = {};
+            options[this.key] = key;
+        } else {
+            throw new Error('Could not resolve options.');
+        }
+
+        // Extend the options passed in with the provider's defaults.
+        analytics._.extend(this.options, options);
+
+        // Call the provider's initialize object.
+        this.initialize.call(this, this.options);
+    };
+
+    // Add some defaults to the Provider prototype.
+    analytics._.extend(Provider.prototype, {
+
+        // Override this with any default options.
+        options : {},
+
+        // Override this if our provider only needs a single API key to
+        // initialize itself, in which case we can use the terse initialization
+        // syntax:
+        //
+        //     analytics.initialize({
+        //       'Provider' : 'XXXXXXX'
+        //     });
+        //
+        key : undefined,
+
+        // Override to provider your own initialization logic, usually a snippet
+        // and loading a Javascript library.
+        initialize : function (options) {}
+
+    });
+
+    // Helper to add provider methods to the prototype chain, for adding custom
+    // providers. Modeled after [Backbone's `extend` method](https://github.com/documentcloud/backbone/blob/master/backbone.js#L1464).
+    Provider.extend = function (name, provider) {
+        var parent = this;
+        var child = function () { return parent.apply(this, arguments); };
+        var Surrogate = function () { this.constructor = child; };
+        Surrogate.prototype = parent.prototype;
+        child.prototype = new Surrogate();
+        analytics._.extend(child.prototype, provider);
+        return child;
+    };
+
+
+
+    // Throw it onto the window.
     window.analytics = analytics;
-})();
 
-
-// Bitdeli
+})();// Bitdeli
 // -------
 // * [Documentation](https://bitdeli.com/docs)
 // * [JavaScript API Reference](https://bitdeli.com/docs/javascript-api.html)
 
 analytics.addProvider('Bitdeli', {
 
-    settings : {
+    options : {
+        // Bitdeli has multiple required keys.
         inputId   : null,
         authToken : null,
-
         // Whether or not to track an initial pageview when the page first
         // loads. You might not want this if you're using a single-page app.
         initialPageview : true
     },
 
-
-    // Initialize
-    // ----------
-
-    // Changes to the Bitdeli snippet:
-    //
-    // * Use `window._bdq` instead of `_bdq` to access existing queue instance
-    // * Always load the latest version of the library
-    //   (major backwards incompatible updates will use another URL)
-    initialize : function (settings) {
-        var utils = analytics.utils;
-        if (!utils.isObject(settings) ||
-            !utils.isString(settings.inputId) ||
-            !utils.isString(settings.authToken)) {
-            throw new Error("Settings must be an object with properties 'inputId' and 'authToken'.");
-        }
-
-        utils.extend(this.settings, settings);
-
+    // Setup the Bitdeli queue and load the latest version of their library.
+    initialize : function (options) {
         var _bdq = window._bdq = window._bdq || [];
-        _bdq.push(["setAccount", this.settings.inputId, this.settings.authToken]);
-        if (this.settings.initialPageview) _bdq.push(["trackPageview"]);
+        _bdq.push(['setAccount', options.inputId, options.authToken]);
 
-        analytics.utils.loadScript('d2flrkr957qc5j.cloudfront.net/bitdeli.min.js');
+        this.loadScript('//d2flrkr957qc5j.cloudfront.net/bitdeli.min.js');
+
+        // Track an initial pageview.
+        if (options.initialPageview) this.pageview();
     },
-
-
-    // Identify
-    // --------
 
     // Bitdeli uses two separate methods: `identify` for storing the `userId`
     // and `set` for storing `traits`.
@@ -580,23 +601,14 @@ analytics.addProvider('Bitdeli', {
         if (traits) window._bdq.push(['set', traits]);
     },
 
-
-    // Track
-    // -----
-
     track : function (event, properties) {
         window._bdq.push(['track', event, properties]);
     },
 
-
-    // Pageview
-    // --------
-
+    // If `url` is undefined, Bitdeli automatically uses the current page's URL.
     pageview : function (url) {
-        // If `url` is undefined, Bitdeli uses the current page URL instead.
         window._bdq.push(['trackPageview', url]);
     }
-
 
 });
 
@@ -609,41 +621,29 @@ analytics.addProvider('Bitdeli', {
 
 analytics.addProvider('Chartbeat', {
 
-    settings : {
-        domain : null,
-        uid    : null
+    defaults : {
+        // Chartbeat has multiple required keys.
+        uid    : null,
+        domain : null
     },
 
-
-    // Initialize
-    // ----------
-
-    // Changes to the Chartbeat snippet:
-    //
-    // * Pass `settings` directly as the config object.
-    // * Replaced the date with our stored `date` variable.
-    initialize : function (settings) {
-        settings = analytics.utils.resolveSettings(settings, 'uid');
-        analytics.utils.extend(this.settings, settings);
-
+    initialize : function (options) {
         // Since all the custom settings just get passed through, update the
         // Chartbeat `_sf_async_config` variable with settings.
-        window._sf_async_config = this.settings || {};
+        window._sf_async_config = options;
 
         // Chartbeat needs the stored time when the page was first rendered, so
         // it can calculate page load times for the user/server.
         window._sf_endpt = analytics.date.getTime();
 
-        analytics.utils.loadScript({
+        this.loadScript({
             http  : 'http://static.chartbeat.com/js/chartbeat.js',
             https : 'https://a248.e.akamai.net/chartbeat.download.akamai.com/102508/js/chartbeat.js'
         });
     },
 
-
-    // Pageview
-    // --------
-
+    // Chartbeat supports virtual URLs and the `url` property is required, so we
+    // default to the current URL.
     pageview : function (url) {
         window.pSUPERFLY.virtualPage(url || window.location.pathname);
     }
@@ -657,28 +657,17 @@ analytics.addProvider('Chartbeat', {
 
 analytics.addProvider('Clicky', {
 
-    settings : {
-        siteId : null
+    key : 'siteId',
+
+    // Setup the current Clicky account and load in the Clicky library.
+    initialize : function (options) {
+        window.clicky_site_ids = window.clicky_site_ids || [];
+        window.clicky_site_ids.push(options.siteId);
+
+        this.loadScript('//static.getclicky.com/js');
     },
 
-
-    // Initialize
-    // ----------
-
-    initialize : function (settings) {
-        settings = analytics.utils.resolveSettings(settings, 'siteId');
-        analytics.utils.extend(this.settings, settings);
-
-        var clicky_site_ids = window.clicky_site_ids = window.clicky_site_ids || [];
-        clicky_site_ids.push(settings.siteId);
-
-        analytics.utils.loadScript('//static.getclicky.com/js');
-    },
-
-
-    // Track
-    // -----
-
+    // Clicky's `log` method only support event names, not properties.
     track : function (event, properties) {
         // We aren't guaranteed `clicky` is available until the script has been
         // requested and run, hence the check.
@@ -694,23 +683,22 @@ analytics.addProvider('Clicky', {
 
 analytics.addProvider('comScore', {
 
-    settings : {
+    key : 'c2',
+
+    defaults : {
+        // Another required option, I'm assuming it's the snippet version.
         c1 : '2',
+        // Your comScore account ID.
         c2 : null
     },
 
-
-    // Initialize
-    // ----------
-
-    initialize : function (settings) {
-        settings = analytics.utils.resolveSettings(settings, 'c2');
-        analytics.utils.extend(this.settings, settings);
-
+    // Setup the current comScore account and load their library. comScore needs
+    // both of the options, so we just pass the entire dictionary straight in.
+    initialize : function (options) {
         var _comscore = window._comscore = window._comscore || [];
-        _comscore.push(this.settings);
+        _comscore.push(options);
 
-        analytics.utils.loadScript({
+        this.loadScript({
             http  : 'http://b.scorecardresearch.com/beacon.js',
             https : 'https://sb.scorecardresearch.com/beacon.js'
         });
@@ -725,23 +713,11 @@ analytics.addProvider('comScore', {
 
 analytics.addProvider('CrazyEgg', {
 
-    settings : {
-        apiKey : null
-    },
+    key : 'apiKey',
 
-
-    // Initialize
-    // ----------
-
-    // Changes to the CrazyEgg snippet:
-    //
-    // * Concatenate `apiKey` into the URL.
-    initialize : function (settings) {
-        settings = analytics.utils.resolveSettings(settings, 'apiKey');
-        analytics.utils.extend(this.settings, settings);
-
-        var fragment = '//dnn506yrbagrg.cloudfront.net/pages/scripts/' + this.settings.apiKey + '.js?' + Math.floor(new Date().getTime()/3600000);
-        analytics.utils.loadScript(fragment);
+    // Load the CrazyEgg library, concatenating in the `apiKey`.
+    initialize : function (options) {
+        this.loadScript('//dnn506yrbagrg.cloudfront.net/pages/scripts/' + options.apiKey + '.js?' + Math.floor(new Date().getTime()/3600000));
     }
 
 });
@@ -753,23 +729,10 @@ analytics.addProvider('CrazyEgg', {
 
 analytics.addProvider('Customer.io', {
 
-    settings : {
-        siteId : null
-    },
+    key : 'siteId',
 
-
-    // Initialize
-    // ----------
-
-    // Changes to the Customer.io snippet:
-    //
-    // * Add `siteId`.
-    initialize : function (settings) {
-        settings = analytics.utils.resolveSettings(settings, 'siteId');
-        analytics.utils.extend(this.settings, settings);
-
-        var self = this;
-
+    // Setup the Customer.io queue and methods, and load in their library.
+    initialize : function (options) {
         var _cio = window._cio = window._cio || [];
         (function() {
             var a,b,c;
@@ -784,17 +747,15 @@ analytics.addProvider('Customer.io', {
             }
         })();
 
-        analytics.utils.loadScript({
-            http           : 'https://assets.customer.io/assets/track.js',
-            https          : 'https://assets.customer.io/assets/track.js',
-            id             : 'cio-tracker',
-            'data-site-id' : this.settings.sideId
+        this.loadScript({
+            http       : 'https://assets.customer.io/assets/track.js',
+            https      : 'https://assets.customer.io/assets/track.js',
+            id         : 'cio-tracker',
+            attributes : {
+                'data-site-id' : options.sideId
+            }
         });
     },
-
-
-    // Identify
-    // --------
 
     identify : function (userId, traits) {
         // Don't do anything if we just have traits, because Customer.io
@@ -807,23 +768,19 @@ analytics.addProvider('Customer.io', {
         traits.id = userId;
 
         // If there wasn't already an email and the userId is one, use it.
-        if (!traits.email && analytics.utils.isEmail(userId)) {
+        if (!traits.email && analytics._.isEmail(userId)) {
             traits.email = userId;
         }
 
         // Swap the `created` trait to the `created_at` that Customer.io needs
         // (in seconds).
         if (traits.created) {
-            traits.created_at = analytics.utils.getSeconds(traits.created);
+            traits.created_at = analytics._.getSeconds(traits.created);
             delete traits.created;
         }
 
         window._cio.identify(traits);
     },
-
-
-    // Track
-    // -----
 
     track : function (event, properties) {
         window._cio.track(event, properties);
@@ -838,45 +795,32 @@ analytics.addProvider('Customer.io', {
 
 analytics.addProvider('Errorception', {
 
-    settings : {
-        projectId : null,
+    key : 'projectId',
 
+    defaults : {
         // Whether to store metadata about the user on `identify` calls, using
         // the [Errorception `meta` API](http://blog.errorception.com/2012/11/capture-custom-data-with-your-errors.html).
         meta : true
     },
 
-
-    // Initialize
-    // ----------
-
-    initialize : function (settings) {
-        settings = analytics.utils.resolveSettings(settings, 'projectId');
-        analytics.utils.extend(this.settings, settings);
-
-        var _errs = window._errs = window._errs || [settings.projectId];
-
-        (function(a,b){
-            a.onerror = function () {
-                _errs.push(arguments);
-            };
-        })(window,document);
-
-        analytics.utils.loadScript('//d15qhc0lu1ghnk.cloudfront.net/beacon.js');
+    // Create the `_errs` queue with the `projectId`, setup the global `onerror`
+    // handler and then load the Errorception library.
+    initialize : function (options) {
+        var _errs = window._errs = window._errs || [options.projectId];
+        window.onerror = function () { _errs.push(arguments); };
+        this.loadScript('//d15qhc0lu1ghnk.cloudfront.net/beacon.js');
     },
 
-
-    // Identify
-    // --------
-
+    // Errorception can store information about the user to help with debugging.
+    // We keep this on by default, since it's useful.
     identify : function (userId, traits) {
         if (!traits) return;
 
         // If the custom metadata object hasn't ever been made, make it.
         window._errs.meta || (window._errs.meta = {});
 
-        // Add all of the traits as metadata.
-        if (this.settings.meta) analytics.utils.extend(window._errs.meta, traits);
+        // Add all of the traits as metadata, keeping any exists ones.
+        if (this.options.meta) analytics._.extend(window._errs.meta, traits);
     }
 
 });
@@ -884,64 +828,55 @@ analytics.addProvider('Errorception', {
 
 // FoxMetrics
 // -----------
-// [Website] (http://foxmetrics.com)
 // [Documentation](http://foxmetrics.com/documentation)
 // [Documentation - JS](http://foxmetrics.com/documentation/apijavascript)
-// [Support](http://support.foxmetrics.com)
 
 analytics.addProvider('FoxMetrics', {
 
-    settings: {
-        appId: null
-    },
+    key : 'appId',
 
-
-    // Initialize
-    // ----------
-
-    initialize: function (settings) {
-        settings = analytics.utils.resolveSettings(settings, 'appId');
-        analytics.utils.extend(this.settings, settings);
-
+    // Create the `_fxm` events queue and load the FoxMetrics library.
+    initialize: function (options) {
         var _fxm = window._fxm || {};
         window._fxm = _fxm.events || [];
-
-        analytics.utils.loadScript('//d35tca7vmefkrc.cloudfront.net/scripts/' + this.settings.appId + '.js');
+        this.loadScript('//d35tca7vmefkrc.cloudfront.net/scripts/' + options.appId + '.js');
     },
-
-
-    // Identify
-    // --------
 
     identify: function (userId, traits) {
+        // The `userId` is required.
+        if (!userId) return;
 
-        // user id is required for profile updates,
-        // otherwise its a waste of resources as nothing will get updated
-        if (userId) {
-            // fxm needs first and last name seperately
-            var fname = null, lname = null, email = null;
-            if (traits) {
-                fname = traits.name.split(' ')[0];
-                lname = traits.name.split(' ')[1];
-                email = typeof (traits.email) !== 'undefined' ? traits.email : null;
-            }
-
-            // we should probably remove name and email before passing as attributes
-            window._fxm.push(['_fxm.visitor.Profile', userId, fname, lname, email, null, null, null, (traits || null)]);
+        // FoxMetrics needs first and last name seperately.
+        var firstName, lastName, email;
+        if (traits && traits.name) {
+            firstName = traits.name.split(' ')[0];
+            lastName  = traits.name.split(' ')[1];
         }
+        if (traits && traits.email) {
+            email = traits.email;
+        }
+
+        // Remove the name and email traits, since they're sent separately.
+        delete traits.name;
+        delete traits.email;
+
+        window._fxm.push([
+            '_fxm.visitor.Profile',
+            userId,    // ID
+            firstName, // First name
+            lastName,  // Last name
+            email,     // Email address
+            null,      // Address
+            null,      // Social information
+            null,      // Parter IDs
+            traits     // Additional attributes
+        ]);
     },
-
-
-    // Track
-    // -----
 
     track: function (event, properties) {
         // send in null as event category name
         window._fxm.push([event, null, properties]);
     },
-
-    // Pageview
-    // ----------
 
     pageview: function (url) {
         // we are happy to accept traditional analytics :)
@@ -1063,12 +998,12 @@ analytics.addProvider('Gauges', {
     // ----------
 
     initialize : function (settings) {
-        settings = analytics.utils.resolveSettings(settings, 'siteId');
-        analytics.utils.extend(this.settings, settings);
+        settings = analytics._.resolveSettings(settings, 'siteId');
+        analytics._.extend(this.settings, settings);
 
         var _gauges = window._gauges = window._gauges || [];
 
-        analytics.utils.loadScript({
+        analytics._.loadScript({
             fragment   : '//secure.gaug.es/track.js',
             id         : 'gauges-tracker',
             attributes : {
@@ -1111,8 +1046,8 @@ analytics.addProvider('GoSquared', {
     // * Attach `GoSquared` to `window`.
 
     initialize : function (settings) {
-        settings = analytics.utils.resolveSettings(settings, 'siteToken');
-        analytics.utils.extend(this.settings, settings);
+        settings = analytics._.resolveSettings(settings, 'siteToken');
+        analytics._.extend(this.settings, settings);
 
         window.GoSquared = {
             acct : this.settings.siteToken,
@@ -1120,7 +1055,7 @@ analytics.addProvider('GoSquared', {
         };
         window._gstc_lt =+ (new Date());
 
-        analytics.utils.loadScript('//d1l6p2sc9645hc.cloudfront.net/tracker.js');
+        analytics._.loadScript('//d1l6p2sc9645hc.cloudfront.net/tracker.js');
     },
 
 
@@ -1176,10 +1111,10 @@ analytics.addProvider('HitTail', {
     // ----------
 
     initialize : function (settings) {
-        settings = analytics.utils.resolveSettings(settings, 'siteId');
-        analytics.utils.extend(this.settings, settings);
+        settings = analytics._.resolveSettings(settings, 'siteId');
+        analytics._.extend(this.settings, settings);
 
-        analytics.utils.loadScript('//' + this.settings.siteId + '.hittail.com/mlt.js');
+        analytics._.loadScript('//' + this.settings.siteId + '.hittail.com/mlt.js');
     }
 
 });
@@ -1203,13 +1138,13 @@ analytics.addProvider('HubSpot', {
     //
     // * Concatenate `portalId` into the URL.
     initialize : function (settings) {
-        settings = analytics.utils.resolveSettings(settings, 'portalId');
-        analytics.utils.extend(this.settings, settings);
+        settings = analytics._.resolveSettings(settings, 'portalId');
+        analytics._.extend(this.settings, settings);
 
         window._hsq = window._hsq || [];
 
         var url = 'https://js.hubspot.com/analytics/' + (Math.ceil(new Date()/300000)*300000) + '/' + this.settings.portalId + '.js';
-        analytics.utils.loadScript({
+        analytics._.loadScript({
             id    : 'hs-analytics',
             http  : url,
             https : url
@@ -1271,8 +1206,8 @@ analytics.addProvider('Intercom', {
     // in `initialize`, we store the settings for later and initialize in
     // `identify`.
     initialize: function (settings) {
-        settings = analytics.utils.resolveSettings(settings, 'appId');
-        analytics.utils.extend(this.settings, settings);
+        settings = analytics._.resolveSettings(settings, 'appId');
+        analytics._.extend(this.settings, settings);
     },
 
 
@@ -1300,11 +1235,11 @@ analytics.addProvider('Intercom', {
         if (traits) {
             settings.email = traits.email;
             settings.name = traits.name;
-            settings.created_at = analytics.utils.getSeconds(traits.created);
+            settings.created_at = analytics._.getSeconds(traits.created);
         }
 
         // If they didn't pass an email, check to see if the `userId` qualifies.
-        if (analytics.utils.isEmail(userId) && (traits && !traits.email)) {
+        if (analytics._.isEmail(userId) && (traits && !traits.email)) {
             settings.email = userId;
         }
 
@@ -1315,7 +1250,7 @@ analytics.addProvider('Intercom', {
             };
         }
 
-        analytics.utils.loadScript({
+        analytics._.loadScript({
             http  : 'https://api.intercom.io/api/js/library.js',
             https : 'https://api.intercom.io/api/js/library.js'
         });
@@ -1344,7 +1279,7 @@ analytics.addProvider('Keen', {
             throw new Error('Settings must be an object with properties projectId and apiKey.');
         }
 
-        analytics.utils.extend(this.settings, settings);
+        analytics._.extend(this.settings, settings);
 
         var Keen=window.Keen||{configure:function(a,b,c){this._pId=a;this._ak=b;this._op=c},addEvent:function(a,b,c,d){this._eq=this._eq||[];this._eq.push([a,b,c,d])},setGlobalProperties:function(a){this._gp=a},onChartsReady:function(a){this._ocrq=this._ocrq||[];this._ocrq.push(a)}};
         (function(){var a=document.createElement("script");a.type="text/javascript";a.async=!0;a.src=("https:"==document.location.protocol?"https://":"http://")+"dc8na2hxrj29i.cloudfront.net/code/keen-2.0.0-min.js";var b=document.getElementsByTagName("script")[0];b.parentNode.insertBefore(a,b)})();
@@ -1391,30 +1326,16 @@ analytics.addProvider('Keen', {
 
 analytics.addProvider('KISSmetrics', {
 
-    settings : {
-        apiKey : null
-    },
+    key : 'apiKey',
 
-
-    // Initialize
-    // ----------
-
-    // Changes to the KISSmetrics snippet:
-    //
-    // * Concatenate the `apiKey` into the URL.
-    initialize : function (settings) {
-        settings = analytics.utils.resolveSettings(settings, 'apiKey');
-        analytics.utils.extend(this.settings, settings);
-
+    // Create the `_kmq` queue and load in the KISSmetrics scripts,
+    // concatenating the `apiKey` into the URL.
+    initialize : function (options) {
         var _kmq = window._kmq = window._kmq || [];
 
-        analytics.utils.loadScript('//i.kissmetrics.com/i.js');
-        analytics.utils.loadScript('//doug1izaerwt3.cloudfront.net/' + this.settings.apiKey + '.1.js');
+        this.loadScript('//i.kissmetrics.com/i.js');
+        this.loadScript('//doug1izaerwt3.cloudfront.net/' + options.apiKey + '.1.js');
     },
-
-
-    // Identify
-    // --------
 
     // KISSmetrics uses two separate methods: `identify` for storing the
     // `userId`, and `set` for storing `traits`.
@@ -1422,10 +1343,6 @@ analytics.addProvider('KISSmetrics', {
         if (userId) window._kmq.push(['identify', userId]);
         if (traits) window._kmq.push(['set', traits]);
     },
-
-
-    // Track
-    // -----
 
     track : function (event, properties) {
         window._kmq.push(['record', event, properties]);
@@ -1453,13 +1370,13 @@ analytics.addProvider('Klaviyo', {
     //
     // * Added `apiKey`.
     initialize : function (settings) {
-        settings = analytics.utils.resolveSettings(settings, 'apiKey');
-        analytics.utils.extend(this.settings, settings);
+        settings = analytics._.resolveSettings(settings, 'apiKey');
+        analytics._.extend(this.settings, settings);
 
         var _learnq = window._learnq = window._learnq || [];
         _learnq.push(['account', this.settings.apiKey]);
 
-        analytics.utils.loadScript('//a.klaviyo.com/media/js/learnmarklet.js');
+        analytics._.loadScript('//a.klaviyo.com/media/js/learnmarklet.js');
     },
 
 
@@ -1515,8 +1432,8 @@ analytics.addProvider('Mixpanel', {
     // We don't need to set the `mixpanel` object on `window` ourselves because
     // they already do that.
     initialize : function (settings) {
-        settings = analytics.utils.resolveSettings(settings, 'token');
-        analytics.utils.extend(this.settings, settings);
+        settings = analytics._.resolveSettings(settings, 'token');
+        analytics._.extend(this.settings, settings);
 
         (function (c, a) {
             window.mixpanel = a;
@@ -1556,14 +1473,14 @@ analytics.addProvider('Mixpanel', {
 
     identify : function (userId, traits) {
         // If we have an email and no email trait, set the email trait.
-        if (userId && analytics.utils.isEmail(userId) && (traits && !traits.email)) {
+        if (userId && analytics._.isEmail(userId) && (traits && !traits.email)) {
             traits || (traits = {});
             traits.email = userId;
         }
 
         // Alias the traits' keys with dollar signs for Mixpanel's API.
         if (traits) {
-            analytics.utils.alias(traits, {
+            analytics._.alias(traits, {
                 'created'   : '$created',
                 'email'     : '$email',
                 'firstName' : '$first_name',
@@ -1635,8 +1552,8 @@ analytics.addProvider('Olark', {
     // * Removed `CDATA` tags.
     // * Add `siteId` from stored `settings`.
     initialize : function (settings) {
-        settings = analytics.utils.resolveSettings(settings, 'siteId');
-        analytics.utils.extend(this.settings, settings);
+        settings = analytics._.resolveSettings(settings, 'siteId');
+        analytics._.extend(this.settings, settings);
 
         window.olark||(function(c){var f=window,d=document,l=f.location.protocol=="https:"?"https:":"http:",z=c.name,r="load";var nt=function(){f[z]=function(){(a.s=a.s||[]).push(arguments)};var a=f[z]._={},q=c.methods.length;while(q--){(function(n){f[z][n]=function(){f[z]("call",n,arguments)}})(c.methods[q])}a.l=c.loader;a.i=nt;a.p={0:+new Date};a.P=function(u){a.p[u]=new Date-a.p[0]};function s(){a.P(r);f[z](r)}f.addEventListener?f.addEventListener(r,s,false):f.attachEvent("on"+r,s);var ld=function(){function p(hd){hd="head";return["<",hd,"></",hd,"><",i,' onl' + 'oad="var d=',g,";d.getElementsByTagName('head')[0].",j,"(d.",h,"('script')).",k,"='",l,"//",a.l,"'",'"',"></",i,">"].join("")}var i="body",m=d[i];if(!m){return setTimeout(ld,100)}a.P(1);var j="appendChild",h="createElement",k="src",n=d[h]("div"),v=n[j](d[h](z)),b=d[h]("iframe"),g="document",e="domain",o;n.style.display="none";m.insertBefore(n,m.firstChild).id=z;b.frameBorder="0";b.id=z+"-loader";if(/MSIE[ ]+6/.test(navigator.userAgent)){b.src="javascript:false"}b.allowTransparency="true";v[j](b);try{b.contentWindow[g].open()}catch(w){c[e]=d[e];o="javascript:var d="+g+".open();d.domain='"+d.domain+"';";b[k]=o+"void(0);"}try{var t=b.contentWindow[g];t.write(p());t.close()}catch(x){b[k]=o+'d.write("'+p().replace(/"/g,String.fromCharCode(92)+'"')+'");d.close();'}a.P(2)};ld()};nt()})({loader: "static.olark.com/jsclient/loader0.js",name:"olark",methods:["configure","extend","declare","identify"]});
         window.olark.identify(this.settings.siteId);
@@ -1714,13 +1631,13 @@ analytics.addProvider('Quantcast', {
     // ----------
 
     initialize : function (settings) {
-        settings = analytics.utils.resolveSettings(settings, 'pCode');
-        analytics.utils.extend(this.settings, settings);
+        settings = analytics._.resolveSettings(settings, 'pCode');
+        analytics._.extend(this.settings, settings);
 
         var _qevents = window._qevents = window._qevents || [];
         _qevents.push({ qacct: settings.pCode });
 
-        analytics.utils.loadScript({
+        analytics._.loadScript({
             http  : 'http://edge.quantserve.com/quant.js',
             https : 'https://secure.quantserve.com/quant.js'
         });
@@ -1747,10 +1664,10 @@ analytics.addProvider('SnapEngage', {
     //
     // * Add `apiKey` from stored `settings`.
     initialize : function (settings) {
-        settings = analytics.utils.resolveSettings(settings, 'apiKey');
-        analytics.utils.extend(this.settings, settings);
+        settings = analytics._.resolveSettings(settings, 'apiKey');
+        analytics._.extend(this.settings, settings);
 
-        analytics.utils.loadScript('//commondatastorage.googleapis.com/code.snapengage.com/js/' + this.settings.apiKey + '.js');
+        analytics._.loadScript('//commondatastorage.googleapis.com/code.snapengage.com/js/' + this.settings.apiKey + '.js');
     }
 
 });
@@ -1771,13 +1688,13 @@ analytics.addProvider('USERcycle', {
     // ----------
 
     initialize : function (settings) {
-        settings = analytics.utils.resolveSettings(settings, 'key');
-        analytics.utils.extend(this.settings, settings);
+        settings = analytics._.resolveSettings(settings, 'key');
+        analytics._.extend(this.settings, settings);
 
         var _uc = window._uc = window._uc || [];
         window._uc.push(['_key', settings.key]);
 
-        analytics.utils.loadScript('//api.usercycle.com/javascripts/track.js');
+        analytics._.loadScript('//api.usercycle.com/javascripts/track.js');
     },
 
 
@@ -1813,13 +1730,13 @@ analytics.addProvider('Vero', {
     // Initialize
     // ----------
     initialize : function (settings) {
-        settings = analytics.utils.resolveSettings(settings, 'apiKey');
-        analytics.utils.extend(this.settings, settings);
+        settings = analytics._.resolveSettings(settings, 'apiKey');
+        analytics._.extend(this.settings, settings);
 
         var _veroq = window._veroq = window._veroq || [];
         _veroq.push(['init', { api_key: settings.apiKey }]);
 
-        analytics.utils.loadScript('//www.getvero.com/assets/m.js');
+        analytics._.loadScript('//www.getvero.com/assets/m.js');
     },
 
 
@@ -1837,7 +1754,7 @@ analytics.addProvider('Vero', {
         traits.id = userId;
 
         // If there wasn't already an email and the userId is one, use it.
-        if (!traits.email && analytics.utils.isEmail(userId)) {
+        if (!traits.email && analytics._.isEmail(userId)) {
             traits.email = userId;
         }
 
