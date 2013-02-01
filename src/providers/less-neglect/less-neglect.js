@@ -23,7 +23,7 @@ analytics.addProvider('Less Neglect', {
             var s = document.createElement('script');
             var el = document.getElementsByTagName('script')[0];
             s.async = true;
-            s.src = (document.location.protocol == 'https:' ? 'https://' : 'http://') + 'api.lessneglect.com/cdn/ln-2.1.min.js';
+            s.src = (document.location.protocol === 'https:' ? 'https://' : 'http://') + 'api.lessneglect.com/cdn/ln-2.1.min.js';
             el.parentNode.insertBefore(s, el);
         })();
     },
@@ -33,29 +33,27 @@ analytics.addProvider('Less Neglect', {
     // --------
 
     identify : function (userId, traits) {
-        
-        // Less Neglect requires an external_identifier as userId
+        // Less Neglect requires both a `userId` and `traits`.
         if (!userId || !traits) return;
 
-        // If there wasn't already an email and the userId is one, use it.
+        // If there wasn't already an email and the `userId` is one, use it.
         if (!traits.email && analytics.utils.isEmail(userId)) {
             traits.email = userId;
         }
 
-        // Swap the `created` trait to the `created_at` that Less Neglect needs
-        // (in seconds).
+        // Swap the `created` trait to the `created_at` that Less Neglect uses,
+        // and convert it to seconds.
         if (traits.created) {
             traits.created_at = analytics.utils.getSeconds(traits.created);
             delete traits.created;
         }
 
         window._lnq.push(["_setPersonData", {
-          name : traits.name,
-          email : traits.email,
+          name                : traits.name,
+          email               : traits.email,
           external_identifier : userId,
-          properties : traits
+          properties          : traits
         }]);
-        
     },
 
 
@@ -64,9 +62,9 @@ analytics.addProvider('Less Neglect', {
 
     track : function (event, properties) {
         var personEvent = {
-            name : event,
+            name                : event,
             external_identifier : null,
-            note : null
+            note                : null
         }
         if(properties.external_identifier) {
             personEvent.external_identifier = properties.external_identifier;

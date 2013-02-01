@@ -2,28 +2,27 @@
 
     suite('Less Neglect');
 
-    var settings = {
-        userId : '12345',
-        projectCode : 'x'
-    };
+    var projectCode = 'x';
+
+    var userId = '';
 
     var event = 'event';
 
     var traits = {
-        name: 'Christopher Gooley',
-        email: 'gooley@lessneglect.com'
+        name  : 'Christopher Gooley',
+        email : 'gooley@lessneglect.com'
     };
 
     var properties = {
-        item_count : 99,
+        item_count          : 99,
         external_identifier : 'abc'
     };
 
     var personEvent = {
-        name : 'event',
+        name                : 'event',
         external_identifier : 'abc',
-        note : null
-    }
+        note                : null
+    };
 
 
     // Initialize
@@ -32,11 +31,12 @@
     test('adds lessneglect\'s track.js on initialize', function (done) {
         expect(window._lnq).to.be(undefined);
 
-        analytics.initialize({ 'Less Neglect' : settings.projectCode });
+        analytics.initialize({ 'Less Neglect' : projectCode });
         expect(window._lnq).not.to.be(undefined);
         expect(window._lnq.push).to.equal(Array.prototype.push);
-        expect(analytics.providers[0].settings.projectCode).to.equal(settings.projectCode);
+        expect(analytics.providers[0].projectCode).to.equal(projectCode);
 
+        // Check to make sure the library has actually loaded.
         setTimeout(function () {
             expect(window._lnq.push).not.to.equal(Array.prototype.push);
             done();
@@ -53,16 +53,16 @@
         expect(spy.called).to.be(false);
 
         spy.reset();
-        analytics.identify(settings.userId);
+        analytics.identify(userId);
         expect(spy.called).to.be(false);
 
         spy.reset();
-        analytics.identify(settings.userId, traits);
+        analytics.identify(userId, traits);
         expect(spy.calledWith(['_setPersonData', {
-            name : traits.name,
-            email : traits.email,
-            external_identifier: settings.userId,
-            properties : traits
+            name                : traits.name,
+            email               : traits.email,
+            external_identifier : userId,
+            properties          : traits
         }])).to.be(true);
 
         spy.restore();
