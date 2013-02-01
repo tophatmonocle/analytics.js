@@ -3,6 +3,7 @@ PHANTOM = node_modules/.bin/mocha-phantomjs
 PHANTOM_OPTS = -s web-security=false -s local-to-remote-url-access=true
 
 FILES = src/analytics.js \
+				src/providers/8digits/8digits.js \
 				src/providers/bitdeli/bitdeli.js \
 				src/providers/chartbeat/chartbeat.js \
 				src/providers/clicky/clicky.js \
@@ -25,8 +26,7 @@ FILES = src/analytics.js \
 				src/providers/quantcast/quantcast.js \
 				src/providers/snapengage/snapengage.js \
 				src/providers/usercycle/usercycle.js \
-				src/providers/vero/vero.js \
-				src/providers/8digits/8digits.js
+				src/providers/vero/vero.js
 
 # Compiles a one-file copy of analytics.js from all the development files.
 analytics.js:

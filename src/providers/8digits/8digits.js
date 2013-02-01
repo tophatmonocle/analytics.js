@@ -1,86 +1,104 @@
+// 8digits
+// -------
+// [Docs](http://8digits.com/web/developers/index)
 
-
-// 8digits.com - Web Monitoring Platform
 analytics.addProvider('8digits', {
-	settings: {
-		trackingCode: null
-	},
 
-	initialize: function (settings) {
-		settings = analytics.utils.resolveSettings(settings, 'trackingCode');
-		analytics.utils.extend(this.settings, settings);
+    settings : {
+        trackingCode : null
+    },
 
-		window._trackingCode = this.settings.trackingCode;
-		(function() {
-			var wa = document.createElement('script'); wa.type = 'text/javascript'; wa.async = true;
-			wa.src = ('https:' == document.location.protocol ? 'https://' : 'http://') + 'tr2-static.8digits.com/js/wm.js?' + Math.random();
-			var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(wa, s);
-		})();
-	},
 
-	identify : function (userId, traits) {
-		if (typeof userId === 'undefined' && typeof traits === 'undefined') {
-			return;
-		}
+    // Initialize
+    // ----------
 
-		if (userId && analytics.utils.isEmail(userId) && (traits && !traits.email)) {
-			traits = traits || {};
-			traits.email = userId;
-		}
+    initialize : function (settings) {
+        settings = analytics.utils.resolveSettings(settings, 'trackingCode');
+        analytics.utils.extend(this.settings, settings);
 
-		if (typeof userId === 'object' && typeof traits === 'undefined') {
-			traits = userId;
-			userId = null;
-		}
+        window._trackingCode = this.settings.trackingCode;
+        (function() {
+            var wa = document.createElement('script'); wa.type = 'text/javascript'; wa.async = true;
+            wa.src = ('https:' == document.location.protocol ? 'https://' : 'http://') + 'tr2-static.8digits.com/js/wm.js?' + Math.random();
+            var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(wa, s);
+        })();
+    },
 
-		// Alias the traits' keys with dollar signs for Mixpanel's API.
-		if (traits) {
-			analytics.utils.alias(traits, {
-				'name'      : 'fullName'
-			});
 
-			if (traits.firstName && traits.lastName) {
-				traits.fullName = traits.firstName + ' ' + traits.lastName;
-			}
+    // Identify
+    // --------
 
-			delete traits['firstName'];
-			delete traits['lastName'];
-		}
+    identify : function (userId, traits) {
+        if (typeof userId === 'undefined' && typeof traits === 'undefined') {
+            return;
+        }
 
-		if (traits) {
-			for (var key in traits) {
-				if (traits.hasOwnProperty(key) && key !== 'avatarPath') {
-					if (key === 'avatar' && (
-						traits[key].indexOf('.jpg') >= 0 || 
-						traits[key].indexOf('.png') >= 0)
-					) {
-						window.WebMon.setVisitorAvatar(traits[key]);
-					} else {
-						window.WebMon.setVisitorAttribute(key, traits[key]);
-					}
-				}
-			}
-		}
-	},
+        if (userId && analytics.utils.isEmail(userId) && (traits && !traits.email)) {
+            traits = traits || {};
+            traits.email = userId;
+        }
 
-	track: function(key, properties, callback) {
-		var value = '';
+        if (typeof userId === 'object' && typeof traits === 'undefined') {
+            traits = userId;
+            userId = null;
+        }
 
-		if (typeof key !== 'string') {
-			return;
-		}
+        // Alias the traits' keys with dollar signs for Mixpanel's API.
+        if (traits) {
+            analytics.utils.alias(traits, {
+                'name'      : 'fullName'
+            });
 
-		if (typeof properties === 'object') {
-			value = properties.value || (properties.count || '');
-		} else if (typeof properties === 'number' ||
-				   typeof properties === 'string') {
-			value = properties;
-		}
+            if (traits.firstName && traits.lastName) {
+                traits.fullName = traits.firstName + ' ' + traits.lastName;
+            }
 
-		window.WebMon.sendEvent(key, value);
-	},
+            delete traits['firstName'];
+            delete traits['lastName'];
+        }
 
-	pageview: function (path) {
-		window.WebMon.newPage(path, true);
-	}
+        if (traits) {
+            for (var key in traits) {
+                if (traits.hasOwnProperty(key) && key !== 'avatarPath') {
+                    if (key === 'avatar' && (
+                        traits[key].indexOf('.jpg') >= 0 ||
+                        traits[key].indexOf('.png') >= 0)
+                    ) {
+                        window.WebMon.setVisitorAvatar(traits[key]);
+                    } else {
+                        window.WebMon.setVisitorAttribute(key, traits[key]);
+                    }
+                }
+            }
+        }
+    },
+
+
+    // Track
+    // -----
+
+    track: function(key, properties, callback) {
+        var value = '';
+
+        if (typeof key !== 'string') {
+            return;
+        }
+
+        if (typeof properties === 'object') {
+            value = properties.value || (properties.count || '');
+        } else if (typeof properties === 'number' ||
+                   typeof properties === 'string') {
+            value = properties;
+        }
+
+        window.WebMon.sendEvent(key, value);
+    },
+
+
+    // Pageview
+    // --------
+
+    pageview: function (path) {
+        window.WebMon.newPage(path, true);
+    }
 });
