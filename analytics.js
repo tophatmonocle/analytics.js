@@ -1050,9 +1050,13 @@ analytics.addProvider('Google Analytics', {
         // Check to see if there is a canonical meta tag to use as the URL.
         var canonicalUrl, metaTags = document.getElementsByTagName('meta');
         for (var i = 0, tag; tag = metaTags[i]; i++) {
+<<<<<<< HEAD
             if (tag.getAttribute('rel') === 'canonical') {
                 canonicalUrl = analytics.utils.parseUrl(tag.getAttribute('href')).pathname;
             }
+=======
+            if (tag.getAttribute('rel') === 'canonical') canonicalUrl = tag.getAttribute('href');
+>>>>>>> 360f6c1014ba579a59accccf10b69bfb6d78b469
         }
         _gaq.push(['_trackPageview', canonicalUrl]);
 
