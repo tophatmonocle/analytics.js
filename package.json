@@ -1,6 +1,10 @@
 {
   "name": "analytics.js",
+<<<<<<< HEAD
   "version": "0.4.7",
+=======
+  "version": "0.6.0",
+>>>>>>> master
   "author": "Segment.io <friends@segment.io>",
   "description": "The hassle-free way to integrate analytics into any web application.",
   "license": "MIT",
@@ -44,14 +48,35 @@
     "hittail",
     "hubspot",
     "intercom",
-    "keen",
+    "keen io",
     "kissmetrics",
     "klaviyo",
     "mixpanel",
     "olark",
+    "perfect audience",
     "quantcast",
     "snapengage",
     "usercycle",
     "vero"
-  ]
+  ],
+  "url": "https://github.com/segmentio/analytics.js",
+  "repository": {
+    "type": "git",
+    "url": "git://github.com/segmentio/analytics.js.git"
+  },
+  "main": "analytics.js",
+  "license": "MIT",
+  "scripts": {
+    "test": "make test"
+  },
+  "devDependencies": {
+    "mocha-cloud": "0.0.1",
+    "mocha-phantomjs": "1.1.1",
+    "connect": "2.7.1",
+    "uglify-js": ">= 1.3.4",
+    "docco": ">= 0.4.0"
+  },
+  "dependencies": {
+    "underscore": "~1.4.3"
+  }
 }

@@ -1,17 +1,56 @@
-0.4.7 / 2013-1-29
+0.6.0 / 2013-2-7
+================
+
+* Added `ready` method for binding to when analytics are initialized
+* Added support for UserVoice
+* Added support for Perfect Audience
+* Added support for LiveChat
+* Fix for Intercom to allow multiple `identify` calls
+
+0.5.1 / 2013-2-4
+================
+
+* Merging in fix for Keen IO's branding
+* Adding fix to `utils.parseUrl()` field `pathname` in IE
+
+0.5.0 / 2013-2-1
+================
+
+* Added an `alias` method for merging two user's by ID
+
+0.4.10 / 2013-1-30
+==================
+
+* Fix for multiple elements on `trackLink` and `trackForm`
+* Fix for CrazyEgg `apiKey` to `accountNumber`
+* Fix for Keen to Keen.io
+
+
+0.4.9 / 2013-1-29
+=================
+
+* Fix for `alias` and `extend` breaking on non-objects
+
+0.4.8 / 2013-1-29
 =================
 
 * Fix for `trackForm` timeout by [@Plasma](https://github.com/Plasma)
 
+0.4.7 / 2013-1-29
+=================
+
+* Added support for Mixpanel's [revenue](https://mixpanel.com/docs/people-analytics/javascript#track_charge) feature
+* Added support for KISSmetrics' `"Billing Amount"` property for revenue
+* Added support for `revenue` being passed to Google Analytics' `value` property
+
 0.4.6 / 2013-1-28
 =================
 
-* Make the most-common case easier by automatically calling Mixpanel's `alias` method
+* Automatically handle canonical URLs in Google Analytics
 
 0.4.5 / 2013-1-25
 =================
 
-* Automatically handle canonical URLs in Google Analytics
 * Add Intercom widget setting
 * Fix for Chartbeat required `body` element to exist
 
@@ -169,4 +208,3 @@
 * Added terse `initialize` syntax
 * Added tests for all providers
 * Added README
-

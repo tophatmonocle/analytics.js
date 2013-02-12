@@ -17,7 +17,7 @@ analytics.addProvider('Errorception', {
     initialize : function (options) {
         var _errs = window._errs = window._errs || [options.projectId];
         window.onerror = function () { _errs.push(arguments); };
-        this.loadScript('//d15qhc0lu1ghnk.cloudfront.net/beacon.js');
+        analytics._.loadScript('//d15qhc0lu1ghnk.cloudfront.net/beacon.js');
     },
 
     // Errorception can store information about the user to help with debugging.

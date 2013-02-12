@@ -21,7 +21,7 @@ analytics.addProvider('Chartbeat', {
         // it can calculate page load times for the user/server.
         window._sf_endpt = analytics.date.getTime();
 
-        this.loadScript({
+        analytics._.loadScript({
             http  : 'http://static.chartbeat.com/js/chartbeat.js',
             https : 'https://a248.e.akamai.net/chartbeat.download.akamai.com/102508/js/chartbeat.js'
         });
@@ -30,6 +30,8 @@ analytics.addProvider('Chartbeat', {
     // Chartbeat supports virtual URLs and the `url` property is required, so we
     // default to the current URL.
     pageview : function (url) {
+        if (!window.pSUPERFLY) return;
+
         window.pSUPERFLY.virtualPage(url || window.location.pathname);
     }
 

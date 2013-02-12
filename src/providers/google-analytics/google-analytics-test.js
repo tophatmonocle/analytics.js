@@ -7,20 +7,19 @@
     // ----------
 
     test('stores settings and adds ga.js on initialize', function (done) {
+        this.timeout(4000);
+
         expect(window._gaq).to.be(undefined);
 
-        analytics.initialize({
-            'Google Analytics' : 'x'
-        });
+        analytics.initialize({ 'Google Analytics' : 'x' });
         expect(window._gaq).not.to.be(undefined);
+        expect(window._gaq.push).to.eql(Array.prototype.push);
         expect(analytics.providers[0].settings.trackingId).to.equal('x');
 
-        // test actual loading
-        expect(window._gaq.I).to.be(undefined);
         setTimeout(function () {
-            expect(window._gaq.I).not.to.be(undefined);
+            expect(window._gaq.push).not.to.eql(Array.prototype.push);
             done();
-        }, 1900);
+        }, 3500);
     });
 
     test('can set domain on initialize', function () {
@@ -85,14 +84,14 @@
 
     test('adds canonical url from meta tag if present', function () {
         // Add the meta tag we need.
-        var $meta = $('<meta rel="canonical" href="http://google.com">').appendTo('head');
+        var $meta = $('<meta rel="canonical" href="http://google.com/a-thing">').appendTo('head');
 
         window._gaq = [];
         var spy = sinon.spy(window._gaq, 'push');
 
         analytics.initialize({ 'Google Analytics' : 'x' });
 
-        expect(spy.calledWith(['_trackPageview', 'http://google.com'])).to.be(true);
+        expect(spy.calledWith(['_trackPageview', '/a-thing'])).to.be(true);
         spy.restore();
         $meta.remove();
     });
@@ -138,10 +137,20 @@
 
         spy.reset();
         analytics.track('event', {
-            value    : 30
+            value : 30
         });
         expect(spy.calledWith(
           ['_trackEvent', 'All', 'event', undefined, 30, undefined]))
+          .to.be(true);
+
+        spy.reset();
+
+        spy.reset();
+        analytics.track('event', {
+            revenue : 9.99
+        });
+        expect(spy.calledWith(
+          ['_trackEvent', 'All', 'event', undefined, 10, undefined]))
           .to.be(true);
 
         spy.reset();

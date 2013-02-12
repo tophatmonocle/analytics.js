@@ -1,4 +1,4 @@
-//     Analytics.js 0.4.7
+//     Analytics.js 0.6.0
 
 //     (c) 2013 Segment.io Inc.
 //     Analytics.js may be freely distributed under the MIT license.
@@ -23,6 +23,10 @@
 
         // Whether analytics.js has been initialized with providers.
         initialized : false,
+
+        // A queue for storing `ready` callback functions to get run when
+        // analytics have been initialized.
+        readyCallbacks : [],
 
         // The amount of milliseconds to wait for requests to providers to clear
         // before navigating away from the current page.
@@ -80,6 +84,11 @@
 
             // Update the initialized state that other methods rely on.
             this.initialized = true;
+
+            // Run any callbacks on our `readyCallbacks` queue.
+            for (var i = 0, callback; callback = this.readyCallbacks[i]; i++) {
+                callback();
+            }
 
             // Try to use id and event parameters from the url
             var userId = this._.getUrlParameter(window.location.search, 'ajs_uid');
@@ -210,46 +219,47 @@
             // arrays, which allows for passing jQuery objects.
             if (this._.isElement(link)) link = [link];
 
+            var self = this;
+
             // Bind to all the links in the array.
             for (var i = 0; i < link.length; i++) {
-                var self = this;
-                var el = link[i];
+                (function (el) {
+                    self.utils.bind(el, 'click', function (e) {
 
-                this._.bind(el, 'click', function (e) {
+                        // Allow for properties to be a function. And pass it the
+                        // link element that was clicked.
+                        if (self.utils.isFunction(properties)) properties = properties(el);
 
-                    // Allow for properties to be a function. And pass it the
-                    // link element that was clicked.
-                    if (self._.isFunction(properties)) properties = properties(el);
+                        // Fire a normal track call.
+                        self.track(event, properties);
 
-                    // Fire a normal track call.
-                    self.track(event, properties);
+                        // To justify us preventing the default behavior we must:
+                        //
+                        // * Have an `href` to use.
+                        // * Not have a `target="_blank"` attribute.
+                        // * Not have any special keys pressed, because they might
+                        // be trying to open in a new tab, or window, or download
+                        // the asset.
+                        //
+                        // This might not cover all cases, but we'd rather throw out
+                        // an event than miss a case that breaks the experience.
+                        if (el.href && el.target !== '_blank' && !self.utils.isMeta(e)) {
 
-                    // To justify us preventing the default behavior we must:
-                    //
-                    // * Have an `href` to use.
-                    // * Not have a `target="_blank"` attribute.
-                    // * Not have any special keys pressed, because they might
-                    // be trying to open in a new tab, or window, or download
-                    // the asset.
-                    //
-                    // This might not cover all cases, but we'd rather throw out
-                    // an event than miss a case that breaks the experience.
-                    if (el.href && el.target !== '_blank' && !self._.isMeta(e)) {
+                            // Prevent the link's default redirect in all the sane
+                            // browsers, and also IE.
+                            if (e.preventDefault)
+                                e.preventDefault();
+                            else
+                                e.returnValue = false;
 
-                        // Prevent the link's default redirect in all the sane
-                        // browsers, and also IE.
-                        if (e.preventDefault)
-                            e.preventDefault();
-                        else
-                            e.returnValue = false;
-
-                        // Navigate to the url after a small timeout, giving the
-                        // providers time to track the event.
-                        setTimeout(function () {
-                            window.location.href = el.href;
-                        }, self.timeout);
-                    }
-                });
+                            // Navigate to the url after a small timeout, giving the
+                            // providers time to track the event.
+                            setTimeout(function () {
+                                window.location.href = el.href;
+                            }, self.timeout);
+                        }
+                    });
+                })(link[i]);
             }
         },
 
@@ -275,33 +285,34 @@
             // arrays, which allows for passing jQuery objects.
             if (this._.isElement(form)) form = [form];
 
+            var self = this;
+
             // Bind to all the forms in the array.
             for (var i = 0; i < form.length; i++) {
-                var self = this;
-                var el = form[i];
+                (function (el) {
+                    self.utils.bind(el, 'submit', function (e) {
 
-                this._.bind(el, 'submit', function (e) {
+                        // Allow for properties to be a function. And pass it the
+                        // form element that was submitted.
+                        if (self.utils.isFunction(properties)) properties = properties(el);
 
-                    // Allow for properties to be a function. And pass it the
-                    // form element that was submitted.
-                    if (self._.isFunction(properties)) properties = properties(el);
+                        // Fire a normal track call.
+                        self.track(event, properties);
 
-                    // Fire a normal track call.
-                    self.track(event, properties);
+                        // Prevent the form's default submit in all the sane
+                        // browsers, and also IE.
+                        if (e.preventDefault)
+                            e.preventDefault();
+                        else
+                            e.returnValue = false;
 
-                    // Prevent the form's default submit in all the sane
-                    // browsers, and also IE.
-                    if (e.preventDefault)
-                        e.preventDefault();
-                    else
-                        e.returnValue = false;
-
-                    // Submit the form after a small timeout, giving the event
-                    // time to get fired.
-                    setTimeout(function () {
-                        el.submit();
-                    }, self.timeout);
-                });
+                        // Submit the form after a small timeout, giving the event
+                        // time to get fired.
+                        setTimeout(function () {
+                            el.submit();
+                        }, self.timeout);
+                    });
+                })(form[i]);
             }
         },
 
@@ -332,6 +343,52 @@
         },
 
 
+        // Alias
+        // -----
+
+        // Alias combines two previously unassociated user identities. This
+        // comes in handy if the same user visits from two different devices and
+        // you want to combine their history. Some providers also don't alias
+        // automatically for you when an anonymous user signs up (like
+        // Mixpanel), so you need to call `alias` manually right after sign up
+        // with their brand new `userId`.
+        //
+        // * `newId` is the new ID you want to associate the user with.
+        //
+        // * `originalId` (optional) is the original ID that the user was
+        // recognized by. This defaults to the currently identified user's ID if
+        // there is one. In most cases you don't need to pass this argument.
+        alias : function (newId, originalId) {
+            if (!this.initialized) return;
+
+            // Call `alias` on all of our enabled providers that support it.
+            for (var i = 0, provider; provider = this.providers[i]; i++) {
+                if (!provider.alias) continue;
+                provider.alias(newId, originalId);
+            }
+        },
+
+
+        // Ready
+        // -----
+
+        // Ready lets you pass in a callback that will get called when your
+        // analytics services have been initialized. It's like jQuery's `ready`
+        // expect for analytics instead of the DOM.
+        ready : function (callback) {
+            // Not a function, get out of here.
+            if (!this.utils.isFunction(callback)) return;
+
+            // If we're already initialized, do it right away. Otherwise, add it
+            // to the queue for when we do get initialized.
+            if (this.initialized) {
+                callback();
+            } else {
+                this.readyCallbacks.push(callback);
+            }
+        },
+
+
         // Utils
         // -----
 
@@ -349,8 +406,12 @@
             // A helper to extend objects with properties from other objects.
             // Based on the [underscore method](https://github.com/documentcloud/underscore/blob/master/underscore.js#L763).
             extend : function (obj) {
+                if (!this.isObject(obj)) return;
+
                 var args = Array.prototype.slice.call(arguments, 1);
                 for (var i = 0, source; source = args[i]; i++) {
+                    if (!this.isObject(source)) return;
+
                     for (var property in source) {
                         obj[property] = source[property];
                     }
@@ -369,6 +430,8 @@
             // A helper to alias certain object's keys to different key names.
             // Useful for abstracting over providers that require specific keys.
             alias : function (obj, aliases) {
+                if (!this.isObject(obj)) return;
+
                 for (var prop in aliases) {
                     var alias = aliases[prop];
                     if (obj[prop] !== undefined) {
@@ -446,10 +509,9 @@
                 return {
                     href     : a.href,
                     host     : a.host || location.host,
-                    port     : a.port || location.port,
                     hash     : a.hash,
                     hostname : a.hostname || location.hostname,
-                    pathname : a.pathname,
+                    pathname : a.pathname.charAt(0) !== '/' ? '/' + a.pathname : a.pathname,
                     protocol : !a.protocol || ':' === a.protocol ? location.protocol : a.protocol,
                     search   : a.search,
                     query    : a.search.slice(1)
@@ -459,7 +521,7 @@
             // A helper to asynchronously load a script by appending a script
             // element to the DOM. This way we don't need to keep repeating all that
             // crufty Javascript snippet code.
-            loadScript : function (options) {
+            loadScript : function (options, callback) {
                 // Allow for the simplest case, just passing a url fragment.
                 if (this.isString(options)) options = { fragment : options };
 
@@ -488,6 +550,40 @@
                 // Attach the script to the DOM.
                 var firstScript = document.getElementsByTagName('script')[0];
                 firstScript.parentNode.insertBefore(script, firstScript);
+
+                if (callback && this.isFunction(callback)) {
+                    if (script.addEventListener) {
+                        script.addEventListener('load', callback, false);
+                    } else if (script.attachEvent) {
+                        script.attachEvent('onreadystatechange', function () {
+                            if (/complete|loaded/.test(script.readyState)) callback();
+                        });
+                    }
+                }
+
+                return script;
+            },
+
+            // A helper to get cookies
+            getCookie : function (name) {
+                if (document.cookie.length > 0) {
+                    var start = document.cookie.indexOf(name + '=');
+                    if (start !== -1) {
+                        start = start + name.length + 1;
+                        var end = document.cookie.indexOf(";", start);
+                        if (end === -1)
+                            end = document.cookie.length;
+                        return unescape(document.cookie.substring(start, end));
+                    }
+                }
+            },
+
+            // A helper to set cookies
+            setCookie : function (name, value, expirationDays) {
+                var expirationDate = new Date();
+                expirationDate.setDate(expirationDate.getDate() + expirationDays);
+                var expirationAndPath = (expirationDays === null ? '' : ';expires=' + expirationDate.toGMTString() + ';path=' + escape('/'));
+                document.cookie = name + '=' + escape(value) + expirationAndPath;
             }
         }
     };

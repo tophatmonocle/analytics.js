@@ -19,7 +19,7 @@ analytics.addProvider('comScore', {
         var _comscore = window._comscore = window._comscore || [];
         _comscore.push(options);
 
-        this.loadScript({
+        analytics._.loadScript({
             http  : 'http://b.scorecardresearch.com/beacon.js',
             https : 'https://sb.scorecardresearch.com/beacon.js'
         });

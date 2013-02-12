@@ -11,7 +11,7 @@ analytics.addProvider('FoxMetrics', {
     initialize: function (options) {
         var _fxm = window._fxm || {};
         window._fxm = _fxm.events || [];
-        this.loadScript('//d35tca7vmefkrc.cloudfront.net/scripts/' + options.appId + '.js');
+        analytics._.loadScript('//d35tca7vmefkrc.cloudfront.net/scripts/' + options.appId + '.js');
     },
 
     identify: function (userId, traits) {

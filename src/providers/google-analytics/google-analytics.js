@@ -45,7 +45,9 @@ analytics.addProvider('Google Analytics', {
         // Check to see if there is a canonical meta tag to use as the URL.
         var canonicalUrl, metaTags = document.getElementsByTagName('meta');
         for (var i = 0, tag; tag = metaTags[i]; i++) {
-            if (tag.getAttribute('rel') === 'canonical') canonicalUrl = tag.getAttribute('href');
+            if (tag.getAttribute('rel') === 'canonical') {
+                canonicalUrl = analytics.utils.parseUrl(tag.getAttribute('href')).pathname;
+            }
         }
         _gaq.push(['_trackPageview', canonicalUrl]);
 
@@ -66,18 +68,18 @@ analytics.addProvider('Google Analytics', {
         var value;
 
         // Since value is a common property name, ensure it is a number
-        if (analytics.utils.isNumber(properties.value))
-            value = properties.value;
+        if (analytics.utils.isNumber(properties.value)) value = properties.value;
 
         // Try to check for a `category` and `label`. A `category` is required,
         // so if it's not there we use `'All'` as a default. We can safely push
-        // undefined if the special properties don't exist.
+        // undefined if the special properties don't exist. Try using revenue
+        // first, but fall back to a generic `value` as well.
         window._gaq.push([
             '_trackEvent',
             properties.category || 'All',
             event,
             properties.label,
-            value,
+            Math.round(properties.revenue) || value,
             properties.noninteraction
         ]);
     },

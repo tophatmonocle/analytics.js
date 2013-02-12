@@ -1,4 +1,4 @@
-//     Analytics.js 0.4.6
+//     Analytics.js 0.6.0
 
 //     (c) 2013 Segment.io Inc.
 //     Analytics.js may be freely distributed under the MIT license.
@@ -23,6 +23,10 @@
 
         // Whether analytics.js has been initialized with providers.
         initialized : false,
+
+        // A queue for storing `ready` callback functions to get run when
+        // analytics have been initialized.
+        readyCallbacks : [],
 
         // The amount of milliseconds to wait for requests to providers to clear
         // before navigating away from the current page.
@@ -80,6 +84,11 @@
 
             // Update the initialized state that other methods rely on.
             this.initialized = true;
+
+            // Run any callbacks on our `readyCallbacks` queue.
+            for (var i = 0, callback; callback = this.readyCallbacks[i]; i++) {
+                callback();
+            }
 
             // Try to use id and event parameters from the url
             var userId = this._.getUrlParameter(window.location.search, 'ajs_uid');
@@ -210,46 +219,47 @@
             // arrays, which allows for passing jQuery objects.
             if (this._.isElement(link)) link = [link];
 
+            var self = this;
+
             // Bind to all the links in the array.
             for (var i = 0; i < link.length; i++) {
-                var self = this;
-                var el = link[i];
+                (function (el) {
+                    self.utils.bind(el, 'click', function (e) {
 
-                this._.bind(el, 'click', function (e) {
+                        // Allow for properties to be a function. And pass it the
+                        // link element that was clicked.
+                        if (self.utils.isFunction(properties)) properties = properties(el);
 
-                    // Allow for properties to be a function. And pass it the
-                    // link element that was clicked.
-                    if (self._.isFunction(properties)) properties = properties(el);
+                        // Fire a normal track call.
+                        self.track(event, properties);
 
-                    // Fire a normal track call.
-                    self.track(event, properties);
+                        // To justify us preventing the default behavior we must:
+                        //
+                        // * Have an `href` to use.
+                        // * Not have a `target="_blank"` attribute.
+                        // * Not have any special keys pressed, because they might
+                        // be trying to open in a new tab, or window, or download
+                        // the asset.
+                        //
+                        // This might not cover all cases, but we'd rather throw out
+                        // an event than miss a case that breaks the experience.
+                        if (el.href && el.target !== '_blank' && !self.utils.isMeta(e)) {
 
-                    // To justify us preventing the default behavior we must:
-                    //
-                    // * Have an `href` to use.
-                    // * Not have a `target="_blank"` attribute.
-                    // * Not have any special keys pressed, because they might
-                    // be trying to open in a new tab, or window, or download
-                    // the asset.
-                    //
-                    // This might not cover all cases, but we'd rather throw out
-                    // an event than miss a case that breaks the experience.
-                    if (el.href && el.target !== '_blank' && !self._.isMeta(e)) {
+                            // Prevent the link's default redirect in all the sane
+                            // browsers, and also IE.
+                            if (e.preventDefault)
+                                e.preventDefault();
+                            else
+                                e.returnValue = false;
 
-                        // Prevent the link's default redirect in all the sane
-                        // browsers, and also IE.
-                        if (e.preventDefault)
-                            e.preventDefault();
-                        else
-                            e.returnValue = false;
-
-                        // Navigate to the url after a small timeout, giving the
-                        // providers time to track the event.
-                        setTimeout(function () {
-                            window.location.href = el.href;
-                        }, self.timeout);
-                    }
-                });
+                            // Navigate to the url after a small timeout, giving the
+                            // providers time to track the event.
+                            setTimeout(function () {
+                                window.location.href = el.href;
+                            }, self.timeout);
+                        }
+                    });
+                })(link[i]);
             }
         },
 
@@ -275,33 +285,34 @@
             // arrays, which allows for passing jQuery objects.
             if (this._.isElement(form)) form = [form];
 
+            var self = this;
+
             // Bind to all the forms in the array.
             for (var i = 0; i < form.length; i++) {
-                var self = this;
-                var el = form[i];
+                (function (el) {
+                    self.utils.bind(el, 'submit', function (e) {
 
-                this._.bind(el, 'submit', function (e) {
+                        // Allow for properties to be a function. And pass it the
+                        // form element that was submitted.
+                        if (self.utils.isFunction(properties)) properties = properties(el);
 
-                    // Allow for properties to be a function. And pass it the
-                    // form element that was submitted.
-                    if (self._.isFunction(properties)) properties = properties(el);
+                        // Fire a normal track call.
+                        self.track(event, properties);
 
-                    // Fire a normal track call.
-                    self.track(event, properties);
+                        // Prevent the form's default submit in all the sane
+                        // browsers, and also IE.
+                        if (e.preventDefault)
+                            e.preventDefault();
+                        else
+                            e.returnValue = false;
 
-                    // Prevent the form's default submit in all the sane
-                    // browsers, and also IE.
-                    if (e.preventDefault)
-                        e.preventDefault();
-                    else
-                        e.returnValue = false;
-
-                    // Submit the form after a small timeout, giving the event
-                    // time to get fired.
-                    setTimeout(function () {
-                        el.submit();
-                    }, self.timeout);
-                });
+                        // Submit the form after a small timeout, giving the event
+                        // time to get fired.
+                        setTimeout(function () {
+                            el.submit();
+                        }, self.timeout);
+                    });
+                })(form[i]);
             }
         },
 
@@ -332,6 +343,52 @@
         },
 
 
+        // Alias
+        // -----
+
+        // Alias combines two previously unassociated user identities. This
+        // comes in handy if the same user visits from two different devices and
+        // you want to combine their history. Some providers also don't alias
+        // automatically for you when an anonymous user signs up (like
+        // Mixpanel), so you need to call `alias` manually right after sign up
+        // with their brand new `userId`.
+        //
+        // * `newId` is the new ID you want to associate the user with.
+        //
+        // * `originalId` (optional) is the original ID that the user was
+        // recognized by. This defaults to the currently identified user's ID if
+        // there is one. In most cases you don't need to pass this argument.
+        alias : function (newId, originalId) {
+            if (!this.initialized) return;
+
+            // Call `alias` on all of our enabled providers that support it.
+            for (var i = 0, provider; provider = this.providers[i]; i++) {
+                if (!provider.alias) continue;
+                provider.alias(newId, originalId);
+            }
+        },
+
+
+        // Ready
+        // -----
+
+        // Ready lets you pass in a callback that will get called when your
+        // analytics services have been initialized. It's like jQuery's `ready`
+        // expect for analytics instead of the DOM.
+        ready : function (callback) {
+            // Not a function, get out of here.
+            if (!this.utils.isFunction(callback)) return;
+
+            // If we're already initialized, do it right away. Otherwise, add it
+            // to the queue for when we do get initialized.
+            if (this.initialized) {
+                callback();
+            } else {
+                this.readyCallbacks.push(callback);
+            }
+        },
+
+
         // Utils
         // -----
 
@@ -349,8 +406,12 @@
             // A helper to extend objects with properties from other objects.
             // Based on the [underscore method](https://github.com/documentcloud/underscore/blob/master/underscore.js#L763).
             extend : function (obj) {
+                if (!this.isObject(obj)) return;
+
                 var args = Array.prototype.slice.call(arguments, 1);
                 for (var i = 0, source; source = args[i]; i++) {
+                    if (!this.isObject(source)) return;
+
                     for (var property in source) {
                         obj[property] = source[property];
                     }
@@ -369,6 +430,8 @@
             // A helper to alias certain object's keys to different key names.
             // Useful for abstracting over providers that require specific keys.
             alias : function (obj, aliases) {
+                if (!this.isObject(obj)) return;
+
                 for (var prop in aliases) {
                     var alias = aliases[prop];
                     if (obj[prop] !== undefined) {
@@ -446,10 +509,9 @@
                 return {
                     href     : a.href,
                     host     : a.host || location.host,
-                    port     : a.port || location.port,
                     hash     : a.hash,
                     hostname : a.hostname || location.hostname,
-                    pathname : a.pathname,
+                    pathname : a.pathname.charAt(0) !== '/' ? '/' + a.pathname : a.pathname,
                     protocol : !a.protocol || ':' === a.protocol ? location.protocol : a.protocol,
                     search   : a.search,
                     query    : a.search.slice(1)
@@ -488,6 +550,28 @@
                 // Attach the script to the DOM.
                 var firstScript = document.getElementsByTagName('script')[0];
                 firstScript.parentNode.insertBefore(script, firstScript);
+            },
+
+            // A helper to get cookies
+            getCookie : function (name) {
+                if (document.cookie.length > 0) {
+                    var start = document.cookie.indexOf(name + '=');
+                    if (start !== -1) {
+                        start = start + name.length + 1;
+                        var end = document.cookie.indexOf(";", start);
+                        if (end === -1)
+                            end = document.cookie.length;
+                        return unescape(document.cookie.substring(start, end));
+                    }
+                }
+            },
+
+            // A helper to set cookies
+            setCookie : function (name, value, expirationDays) {
+                var expirationDate = new Date();
+                expirationDate.setDate(expirationDate.getDate() + expirationDays);
+                var expirationAndPath = (expirationDays === null ? '' : ';expires=' + expirationDate.toGMTString() + ';path=' + escape('/'));
+                document.cookie = name + '=' + escape(value) + expirationAndPath;
             }
         }
     };
@@ -567,7 +651,8 @@
     // Throw it onto the window.
     window.analytics = analytics;
 
-})();// Bitdeli
+})();
+// Bitdeli
 // -------
 // * [Documentation](https://bitdeli.com/docs)
 // * [JavaScript API Reference](https://bitdeli.com/docs/javascript-api.html)
@@ -645,6 +730,8 @@ analytics.addProvider('Chartbeat', {
     // Chartbeat supports virtual URLs and the `url` property is required, so we
     // default to the current URL.
     pageview : function (url) {
+        if (!window.pSUPERFLY) return;
+
         window.pSUPERFLY.virtualPage(url || window.location.pathname);
     }
 
@@ -669,9 +756,11 @@ analytics.addProvider('Clicky', {
 
     // Clicky's `log` method only support event names, not properties.
     track : function (event, properties) {
+        if (!window.clicky) return;
+
         // We aren't guaranteed `clicky` is available until the script has been
         // requested and run, hence the check.
-        if (window.clicky) window.clicky.log(window.location.href, event);
+        window.clicky.log(window.location.href, event);
     }
 
 });
@@ -713,11 +802,41 @@ analytics.addProvider('comScore', {
 
 analytics.addProvider('CrazyEgg', {
 
+<<<<<<< HEAD
     key : 'apiKey',
 
     // Load the CrazyEgg library, concatenating in the `apiKey`.
     initialize : function (options) {
         this.loadScript('//dnn506yrbagrg.cloudfront.net/pages/scripts/' + options.apiKey + '.js?' + Math.floor(new Date().getTime()/3600000));
+=======
+    settings : {
+        accountNumber : null
+    },
+
+
+    // Initialize
+    // ----------
+
+    // Changes to the CrazyEgg snippet:
+    //
+    // * Concatenate `accountNumber` into the URL.
+    initialize : function (settings) {
+        settings = analytics.utils.resolveSettings(settings, 'accountNumber');
+        analytics.utils.extend(this.settings, settings);
+
+        var accountNumber = this.settings.accountNumber;
+        var accountPath = accountNumber.slice(0, 4) + '/' + accountNumber.slice(4);
+        
+        (function(){
+            var a = document.createElement('script');
+            var b = document.getElementsByTagName('script')[0];
+            var protocol = ('https:' == document.location.protocol) ? 'https:' : 'http:';
+            a.src = protocol+'//dnn506yrbagrg.cloudfront.net/pages/scripts/'+accountPath+'.js?'+Math.floor(new Date().getTime()/3600000);
+            a.async = true;
+            a.type = 'text/javascript';
+            b.parentNode.insertBefore(a,b);
+        })();
+>>>>>>> master
     }
 
 });
@@ -887,6 +1006,46 @@ analytics.addProvider('FoxMetrics', {
 });
 
 
+// Gauges
+// -------
+// [Documentation](http://get.gaug.es/documentation/tracking/).
+
+analytics.addProvider('Gauges', {
+
+    settings : {
+        siteId : null
+    },
+
+
+    // Initialize
+    // ----------
+
+    initialize : function (settings) {
+        settings = analytics._.resolveSettings(settings, 'siteId');
+        analytics._.extend(this.settings, settings);
+
+        var _gauges = window._gauges = window._gauges || [];
+
+        analytics._.loadScript({
+            fragment   : '//secure.gaug.es/track.js',
+            id         : 'gauges-tracker',
+            attributes : {
+                'data-site-id' : settings.siteId
+            }
+        });
+    },
+
+
+    // Pageview
+    // --------
+
+    pageview : function (url) {
+        window._gauges.push(['track']);
+    }
+
+});
+
+
 // Google Analytics
 // ----------------
 // [Documentation](https://developers.google.com/analytics/devguides/collection/gajs/).
@@ -934,7 +1093,9 @@ analytics.addProvider('Google Analytics', {
         // Check to see if there is a canonical meta tag to use as the URL.
         var canonicalUrl, metaTags = document.getElementsByTagName('meta');
         for (var i = 0, tag; tag = metaTags[i]; i++) {
-            if (tag.getAttribute('rel') === 'canonical') canonicalUrl = tag.getAttribute('href');
+            if (tag.getAttribute('rel') === 'canonical') {
+                canonicalUrl = analytics.utils.parseUrl(tag.getAttribute('href')).pathname;
+            }
         }
         _gaq.push(['_trackPageview', canonicalUrl]);
 
@@ -955,18 +1116,18 @@ analytics.addProvider('Google Analytics', {
         var value;
 
         // Since value is a common property name, ensure it is a number
-        if (analytics.utils.isNumber(properties.value))
-            value = properties.value;
+        if (analytics.utils.isNumber(properties.value)) value = properties.value;
 
         // Try to check for a `category` and `label`. A `category` is required,
         // so if it's not there we use `'All'` as a default. We can safely push
-        // undefined if the special properties don't exist.
+        // undefined if the special properties don't exist. Try using revenue
+        // first, but fall back to a generic `value` as well.
         window._gaq.push([
             '_trackEvent',
             properties.category || 'All',
             event,
             properties.label,
-            value,
+            Math.round(properties.revenue) || value,
             properties.noninteraction
         ]);
     },
@@ -978,46 +1139,6 @@ analytics.addProvider('Google Analytics', {
     pageview : function (url) {
         // If there isn't a url, that's fine.
         window._gaq.push(['_trackPageview', url]);
-    }
-
-});
-
-
-// Gauges
-// -------
-// [Documentation](http://get.gaug.es/documentation/tracking/).
-
-analytics.addProvider('Gauges', {
-
-    settings : {
-        siteId : null
-    },
-
-
-    // Initialize
-    // ----------
-
-    initialize : function (settings) {
-        settings = analytics._.resolveSettings(settings, 'siteId');
-        analytics._.extend(this.settings, settings);
-
-        var _gauges = window._gauges = window._gauges || [];
-
-        analytics._.loadScript({
-            fragment   : '//secure.gaug.es/track.js',
-            id         : 'gauges-tracker',
-            attributes : {
-                'data-site-id' : settings.siteId
-            }
-        });
-    },
-
-
-    // Pageview
-    // --------
-
-    pageview : function (url) {
-        window._gauges.push(['track']);
     }
 
 });
@@ -1191,6 +1312,11 @@ analytics.addProvider('HubSpot', {
 
 analytics.addProvider('Intercom', {
 
+    // Whether Intercom has already been initialized or not. This is because
+    // since we initialize Intercom on `identify`, people can make multiple
+    // `identify` calls and we don't want that breaking anything.
+    initialized : false,
+
     settings : {
         appId  : null,
 
@@ -1220,6 +1346,11 @@ analytics.addProvider('Intercom', {
     // * Add `userId`.
     // * Add `userHash` for secure mode
     identify: function (userId, traits) {
+        // If we've already been initialized once, don't do it again since we
+        // load the script when this happens. Intercom can only handle one
+        // identify call.
+        if (this.initialized) return;
+
         // Don't do anything if we just have traits.
         if (!userId) return;
 
@@ -1250,20 +1381,33 @@ analytics.addProvider('Intercom', {
             };
         }
 
+<<<<<<< HEAD
         analytics._.loadScript({
             http  : 'https://api.intercom.io/api/js/library.js',
             https : 'https://api.intercom.io/api/js/library.js'
         });
+=======
+        (function() {
+            var s = document.createElement('script');
+            s.type = 'text/javascript'; s.async = true;
+            s.src = 'https://api.intercom.io/api/js/library.js';
+            var x = document.getElementsByTagName('script')[0];
+            x.parentNode.insertBefore(s, x);
+        })();
+
+        // Set the initialized state, so that we don't initialize again.
+        this.initialized = true;
+>>>>>>> master
     }
 
 });
 
 
-// Keen IO
+// Keen.io
 // -------
 // [Documentation](https://keen.io/docs/).
 
-analytics.addProvider('Keen', {
+analytics.addProvider('Keen IO', {
 
     settings: {
         projectId : null,
@@ -1295,6 +1439,8 @@ analytics.addProvider('Keen', {
     // --------
 
     identify: function(userId, traits) {
+        if (!window.Keen.setGlobalProperties) return;
+
         // Use Keen IO global properties to include `userId` and `traits` on
         // every event sent to Keen IO.
         var globalUserProps = {};
@@ -1314,6 +1460,8 @@ analytics.addProvider('Keen', {
     // -----
 
     track: function(event, properties) {
+        if (!window.Keen.addEvent) return;
+
         window.Keen.addEvent(event, properties);
     }
 
@@ -1345,7 +1493,23 @@ analytics.addProvider('KISSmetrics', {
     },
 
     track : function (event, properties) {
+        // KISSmetrics handles revenue with the `'Billing Amount'` property by
+        // default, although it's changeable in the interface.
+        analytics.utils.alias(properties, {
+            'revenue' : 'Billing Amount'
+        });
+
         window._kmq.push(['record', event, properties]);
+    },
+
+
+    // Alias
+    // -----
+
+    // Although undocumented, KISSmetrics actually supports not passing a second
+    // ID, in which case it uses the currenty identified user's ID.
+    alias : function (newId, originalId) {
+        window._kmq.push(['alias', newId, originalId]);
     }
 
 });
@@ -1354,7 +1518,6 @@ analytics.addProvider('KISSmetrics', {
 // Klaviyo
 // -------
 // [Documentation](https://www.klaviyo.com/docs).
-// [Documentation](https://www.klaviyo.com/docs/http-api).
 
 analytics.addProvider('Klaviyo', {
 
@@ -1402,6 +1565,68 @@ analytics.addProvider('Klaviyo', {
 });
 
 
+// LiveChat
+// --------
+// [Documentation](http://www.livechatinc.com/api/javascript-api).
+
+analytics.addProvider('LiveChat', {
+
+    settings : {
+        license : null
+    },
+
+
+    // Initialize
+    // ----------
+
+    initialize : function (settings) {
+        settings = analytics.utils.resolveSettings(settings, 'license');
+        analytics.utils.extend(this.settings, settings);
+
+        window.__lc = {};
+        window.__lc.license = this.settings.license;
+
+        (function() {
+            var lc = document.createElement('script'); lc.type = 'text/javascript'; lc.async = true;
+            lc.src = ('https:' === document.location.protocol ? 'https://' : 'http://') + 'cdn.livechatinc.com/tracking.js';
+            var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(lc, s);
+        })();
+    },
+
+
+    // Identify
+    // --------
+
+    // LiveChat isn't an analytics service, but we can use the `userId` and
+    // `traits` to tag the user with their real name in the chat console.
+    identify : function (userId, traits) {
+        // We aren't guaranteed the variable exists.
+        if (!window.LC_API) return;
+
+        // We need either a `userId` or `traits`.
+        if (!userId && !traits) return;
+
+        // LiveChat takes them in an array format.
+        var variables = [];
+
+        if (userId) {
+            variables.push({ name: 'User ID', value: userId });
+        }
+        if (traits) {
+            for (var key in traits) {
+                var trait = {};
+                trait.name = key;
+                trait.value = traits[key];
+                variables.push(trait);
+            }
+        }
+
+        window.LC_API.set_custom_variables(variables);
+    }
+
+});
+
+
 // Mixpanel
 // --------
 // [Documentation](https://mixpanel.com/docs/integration-libraries/javascript),
@@ -1411,8 +1636,6 @@ analytics.addProvider('Klaviyo', {
 analytics.addProvider('Mixpanel', {
 
     settings : {
-        // Whether to always call `mixpanel.alias` on `identify`.
-        alias   : true,
         // Whether to call `mixpanel.nameTag` on `identify`.
         nameTag : true,
         // Whether to use Mixpanel's People API.
@@ -1496,13 +1719,6 @@ analytics.addProvider('Mixpanel', {
         if (userId) {
             window.mixpanel.identify(userId);
             if (this.settings.nameTag) window.mixpanel.name_tag(traits && traits.$email || userId);
-
-            // Mixpanel doesn't automatically alias anonymous users when they
-            // get identified. They say you should only call this once on signup
-            // but we've talked to their support, and as long as you're not
-            // doing crazy things the most common case is that this won't hurt
-            // at all.
-            if (this.settings.alias) window.mixpanel.alias(userId);
         }
         if (traits) {
             window.mixpanel.register(traits);
@@ -1516,6 +1732,12 @@ analytics.addProvider('Mixpanel', {
 
     track : function (event, properties) {
         window.mixpanel.track(event, properties);
+
+        // Mixpanel handles revenue with a `transaction` call in their People
+        // feature. So if we're using people, record a transcation.
+        if (properties && properties.revenue && this.settings.people) {
+            window.mixpanel.people.track_charge(properties.revenue);
+        }
     },
 
 
@@ -1526,6 +1748,16 @@ analytics.addProvider('Mixpanel', {
     // Mixpanel stream.
     pageview : function (url) {
         window.mixpanel.track_pageview(url);
+    },
+
+
+    // Alias
+    // -----
+
+    // Although undocumented, Mixpanel actually supports the `originalId`. It
+    // just usually defaults to the current user's `distinct_id`.
+    alias : function (newId, originalId) {
+        window.mixpanel.alias(newId, originalId);
     }
 
 });
@@ -1611,6 +1843,47 @@ analytics.addProvider('Olark', {
         window.olark('api.chat.sendNotificationToOperator', {
             body : 'looking at ' + window.location.href
         });
+    }
+
+});
+
+
+// Perfect Audience
+// ----------------
+// [Documentation](https://www.perfectaudience.com/docs#javascript_api_autoopen)
+
+analytics.addProvider('Perfect Audience', {
+
+    settings : {
+        siteId : null
+    },
+
+
+    // Initialize
+    // ----------
+
+    initialize : function (settings) {
+        settings = analytics.utils.resolveSettings(settings, 'siteId');
+        analytics.utils.extend(this.settings, settings);
+
+        (function() {
+            window._pa = window._pa || {};
+            var pa = document.createElement('script'); pa.type = 'text/javascript'; pa.async = true;
+            pa.src = ('https:' === document.location.protocol ? 'https:' : 'http:') + "//tag.perfectaudience.com/serve/" + settings.siteId + ".js";
+            var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(pa, s);
+        })();
+
+    },
+
+
+    // Track
+    // -----
+
+    track : function (event, properties) {
+        // We're not guaranteed a track method.
+        if (!window._pa.track) return;
+
+        window._pa.track(event, properties);
     }
 
 });
@@ -1716,6 +1989,35 @@ analytics.addProvider('USERcycle', {
 });
 
 
+// UserVoice
+// ---------
+// [Documentation](http://feedback.uservoice.com/knowledgebase/articles/16797-how-do-i-customize-and-install-the-uservoice-feedb).
+
+analytics.addProvider('UserVoice', {
+
+    settings : {
+        widgetId : null
+    },
+
+
+    // Initialize
+    // ----------
+
+    initialize : function (settings) {
+        settings = analytics.utils.resolveSettings(settings, 'widgetId');
+        analytics.utils.extend(this.settings, settings);
+
+        window.uvOptions = {};
+        (function() {
+            var uv = document.createElement('script'); uv.type = 'text/javascript'; uv.async = true;
+            uv.src = ('https:' === document.location.protocol ? 'https://' : 'http://') + 'widget.uservoice.com/' + settings.widgetId + '.js';
+            var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(uv, s);
+        })();
+    }
+
+});
+
+
 // GetVero.com
 // -----------
 // [Documentation](https://github.com/getvero/vero-api/blob/master/sections/js.md).
@@ -1772,4 +2074,70 @@ analytics.addProvider('Vero', {
         window._veroq.push(['track', event, properties]);
     }
 
+});// Woopra
+// ------
+// [Documentation](http://www.woopra.com/docs/setup/javascript-tracking/).
+
+analytics.addProvider('Woopra', {
+
+    settings : {
+        domain : null
+    },
+
+
+    // Initialize
+    // ----------
+
+    initialize : function (settings) {
+        settings = analytics.utils.resolveSettings(settings, 'domain');
+        analytics.utils.extend(this.settings, settings);
+
+        var self = this;
+        window.woopraReady = function (tracker) {
+            tracker.setDomain(self.settings.domain);
+            tracker.setIdleTimeout(300000);
+            tracker.track();
+            return false;
+        };
+
+        (function(){
+            var wsc = document.createElement('script');
+            wsc.type = 'text/javascript';
+            var protocol = ('https:' === document.location.protocol) ? 'https:' : 'http:';
+            wsc.src = protocol + '//static.woopra.com/js/woopra.js';
+            wsc.async = true;
+            var ssc = document.getElementsByTagName('script')[0];
+            ssc.parentNode.insertBefore(wsc, ssc);
+        })();
+    },
+
+
+    // Identify
+    // --------
+
+    identify : function (userId, traits) {
+        // TODO - we need the cookie solution, because Woopra is one of those
+        // that requires identify to happen before the script is requested.
+    },
+
+
+    // Track
+    // -----
+
+    track : function (event, properties) {
+        // We aren't guaranteed a tracker.
+        if (!window.woopraTracker) return;
+
+        // Woopra takes its event as dictionaries with the `name` key.
+        var settings = {};
+        settings.name = event;
+
+        // If we have properties, add them to the settings.
+        if (properties) settings = analytics.utils.extend({}, properties, settings);
+
+        window.woopraTracker.pushEvent(settings);
+    }
+
 });
+
+

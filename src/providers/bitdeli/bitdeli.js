@@ -19,7 +19,7 @@ analytics.addProvider('Bitdeli', {
         var _bdq = window._bdq = window._bdq || [];
         _bdq.push(['setAccount', options.inputId, options.authToken]);
 
-        this.loadScript('//d2flrkr957qc5j.cloudfront.net/bitdeli.min.js');
+        analytics._.loadScript('//d2flrkr957qc5j.cloudfront.net/bitdeli.min.js');
 
         // Track an initial pageview.
         if (options.initialPageview) this.pageview();

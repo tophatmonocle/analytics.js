@@ -22,7 +22,7 @@ analytics.addProvider('Customer.io', {
             }
         })();
 
-        this.loadScript({
+        analytics._.loadScript({
             http       : 'https://assets.customer.io/assets/track.js',
             https      : 'https://assets.customer.io/assets/track.js',
             id         : 'cio-tracker',
