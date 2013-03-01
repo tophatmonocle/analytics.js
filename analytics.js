@@ -678,7 +678,7 @@ function set(name, value, options) {
 
   if (options.path) str += '; path=' + options.path;
   if (options.domain) str += '; domain=' + options.domain;
-  if (options.expires) str += '; expires=' + options.expires.toGMTString();
+  if (options.expires) str += '; expires=' + options.expires.toUTCString();
   if (options.secure) str += '; secure';
 
   document.cookie = str;
@@ -1308,6 +1308,18 @@ extend(Analytics.prototype, {
     // Call `alias` on all of our enabled providers that support it.
     each(this.providers, function (provider) {
       if (provider.alias) provider.alias(newId, originalId);
+    });
+  },
+
+  // Increment
+  // -----
+
+  increment : function (event, value) {
+    if (!this.initialized) return;
+
+    // Call `alias` on all of our enabled providers that support it.
+    each(this.providers, function (provider) {
+      if (provider.increment) provider.increment(event, value);
     });
   }
 
@@ -2368,16 +2380,13 @@ module.exports = Provider.extend({
 
     load('//dc8na2hxrj29i.cloudfront.net/code/keen-2.0.0-min.js');
 
-    // Keen IO actually defines all their functions in their snippet, so they
+    // Keen IO defines all their functions in the snippet, so they
     // are ready immediately.
     ready();
   },
 
 
   identify : function(userId, traits) {
-    // In case the Keen IO library hasn't loaded yet.
-    if (!window.Keen.setGlobalProperties) return;
-
     // Use Keen IO global properties to include `userId` and `traits` on
     // every event sent to Keen IO.
     var globalUserProps = {};
@@ -2392,9 +2401,6 @@ module.exports = Provider.extend({
 
 
   track : function(event, properties) {
-    // In case the Keen IO library hasn't loaded yet.
-    if (!window.Keen.addEvent) return;
-
     window.Keen.addEvent(event, properties);
   }
 
@@ -2677,6 +2683,14 @@ module.exports = Provider.extend({
   // just usually defaults to the current user's `distinct_id`.
   alias : function (newId, originalId) {
     window.mixpanel.alias(newId, originalId);
+  },
+
+  // Mixpanel's people API has an increment call that let's you increment the 
+  // property of a person by a set amount, default = 1
+  increment : function (event, amount) {
+    if(this.options.people){
+      window.mixpanel.people.increment(event,amount);
+    }
   }
 
 });

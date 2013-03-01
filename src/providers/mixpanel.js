@@ -116,6 +116,14 @@ module.exports = Provider.extend({
   // just usually defaults to the current user's `distinct_id`.
   alias : function (newId, originalId) {
     window.mixpanel.alias(newId, originalId);
+  },
+
+  // Mixpanel's people API has an increment call that let's you increment the 
+  // property of a person by a set amount, default = 1
+  increment : function (event, amount) {
+    if(this.options.people){
+      window.mixpanel.people.increment(event,amount);
+    }
   }
 
 });

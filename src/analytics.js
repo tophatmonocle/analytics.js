@@ -424,6 +424,18 @@ extend(Analytics.prototype, {
     each(this.providers, function (provider) {
       if (provider.alias) provider.alias(newId, originalId);
     });
+  },
+
+  // Increment
+  // -----
+
+  increment : function (event, value) {
+    if (!this.initialized) return;
+
+    // Call `alias` on all of our enabled providers that support it.
+    each(this.providers, function (provider) {
+      if (provider.increment) provider.increment(event, value);
+    });
   }
 
 });

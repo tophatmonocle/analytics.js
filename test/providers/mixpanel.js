@@ -179,4 +179,22 @@ describe('Mixpanel', function () {
 
   });
 
+  describe('increment', function () {
+
+    it('should call people.increment', function () {
+      // The revenue feature requires `people` to be turned on.
+      analytics.providers[0].options.people = true;
+      var spy = sinon.spy(window.mixpanel.people, 'increment');
+
+      analytics.increment(test.event, 10);
+      expect(spy.called).to.be(true);
+
+      spy.restore();
+      analytics.providers[0].options.people = false;
+
+    });
+
+  });
+
+
 });
